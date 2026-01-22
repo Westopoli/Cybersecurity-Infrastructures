@@ -15,7 +15,8 @@
 #define Max_File_Name_Size 100
 
 // global variable declarations
-size_t size;
+size_t messageSize;
+size_t seedSize;
 char messageFileName[Max_File_Name_Size]; 
 char seedFileName[Max_File_Name_Size];
 char *filePointer = messageFileName;
@@ -66,14 +67,44 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    unsigned char *message = readFile(messageFile, &size);
-    unsigned char *seed = readFile(seedFile, &size);
+    unsigned char *message = readFile(messageFile, &messageSize);
+    unsigned char *seed = readFile(seedFile, &seedSize);
 
     // print message and seed for debugging
     printf("Message: %s\n", message);
     printf("Seed: %s\n", seed);
 
     // TODO: Implement key generation, encryption, and acknowledgment logic here
+    // Edge case checks
+        // Message must be greater than or equal to 32 bytes
+        if (messageSize < 32){
+            printf("Message must be at least 32 bytes.");
+            return 0;
+        }
+        
+        // Seed must be exactly 32 bytes
+        if (seedSize != 32){
+            printf("Seed must be exactly 32 bytes, not %zu bytes.", seedSize);
+            return 0;
+        }
+
+    unsigned char *key = malloc(messageSize);
+    if (!key) {
+        printf("Memory allocation for key failed.");
+        return 0;
+    }
+
+    SHA256(seed, seedSize, key);
+
+    // prints the hash in machine code (unreadable)
+    printf("SHA-256 hash: %s", key);
+
+    // prints the hash in hexadecimal (readable)
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        printf("%02x", key[i]);
+    }
+
+
 
     // close files after reading
     fclose(messageFile);
@@ -84,24 +115,25 @@ int main(int argc, char *argv[]) {
 
 // Helper functions
 
-unsigned char *readFile(FILE *messageFile, size_t *length) {
+unsigned char *readFile(FILE *file, size_t *length) {
     // Move the file pointer to the end of the file
-    fseek(messageFile, 0, SEEK_END);
+    fseek(file, 0, SEEK_END);
     // Get the current position of the file pointer (which is the size of the file)
-    size = ftell(messageFile);
+    messageSize = ftell(file);
+    *length = messageSize;
     // Move the file pointer back to the beginning of the file
-    rewind(messageFile);
-    if (size <= 0){
+    rewind(file);
+    if (messageSize <= 0){
         printf("file is empty.");
         return NULL;
     }
 
     // Allocate memory to hold the file contents, return NULL if malloc fails
-    unsigned char *buffer = malloc(size);
+    unsigned char *buffer = malloc(messageSize);
     if (!buffer) return NULL;
 
     // Easy library function to read file contents into buffer
-    fread(buffer, 1, size, messageFile);
+    fread(buffer, 1, messageSize, file);
 
     return buffer;
 }
