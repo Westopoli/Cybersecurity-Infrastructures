@@ -1,5 +1,5 @@
 // Alice reads the message from the ”Message.txt” file and the he shared seed from the ”SharedSeed.txt” file. 
-// Then the secret key is generated from the shared seed based on utilizing the PRNG function from OpenSSL. The key size must match the message length.
+// Then the secret key is generated from the shared seed based on utilizing the ChaCha20 PRNG function from OpenSSL. The key size must match the message length.
 // Then the Hex format of the key is written in a file named “Key.txt”.
 // XOR the message with the secret key to obtain the ciphertext: (Ciphertext = Message XOR Key).
 // Write the Hex format of the ciphertext in a file named “Ciphertext.txt”.
@@ -11,6 +11,7 @@
 #include <stdio.h>
 
 #include <openssl/sha.h>
+#include <openssl/evp.h>
 
 #define Max_File_Name_Size 100
 
@@ -88,27 +89,42 @@ int main(int argc, char *argv[]) {
             return 0;
         }
 
+    // allocate memory for key
     unsigned char *key = malloc(messageSize);
     if (!key) {
         printf("Memory allocation for key failed.");
         return 0;
     }
+    
+    // Initialize OpenSSL EVP for ChaCha20 to generate key
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    EVP_EncryptInit_ex(ctx, EVP_chacha20(), NULL, seed, NULL);
 
-    SHA256(seed, seedSize, key);
+    // Convert message length to int and generate key, passing the key buffer, 
+    // seed, message size, and cipher context structure
+    int outLength = (int)messageSize;
+    EVP_EncryptUpdate(ctx, key, &outLength, seed, messageSize);
+    EVP_CIPHER_CTX_free(ctx);
 
-    // prints the hash in machine code (unreadable)
-    printf("SHA-256 hash: %s", key);
+    // // prints the key in hexadecimal (readable)
+    // for (int i = 0; i < messageSize; i++) {
+    //     printf("%02x", key[i]);
+    // }
 
-    // prints the hash in hexadecimal (readable)
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        printf("%02x", key[i]);
-    }
+    // Write key to "Key.txt" in hexadecimal format
+    // FILE *keyFile = fopen("Key.txt", "w");
 
 
 
     // close files after reading
     fclose(messageFile);
     fclose(seedFile);
+
+    // free allocated memory
+    free(message);
+    free(seed);
+    free(key);
+    
 
     return 0;
 }
