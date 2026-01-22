@@ -16,8 +16,6 @@
 
 // global variable declarations
 size_t size;
-char *userMessageFileArg;
-char *userSeedFileArg;
 char messageFileName[Max_File_Name_Size]; 
 char seedFileName[Max_File_Name_Size];
 char *filePointer = messageFileName;
@@ -27,16 +25,24 @@ unsigned char *readFile(FILE *messageFile, size_t *length);
 
 int main(int argc, char *argv[]) {
 
-    // CURRENTLY DOES NOT WORK -------------------------
+    char *userMessageFileArg = argv[1];
+    char *userSeedFileArg = argv[2];
+
     // If the user enters the wrong number of arguments, the program will not run
-    if((argc > 1) && (argc < 3))
+    if(argc == 3)
     {
+        // Initialize pointers to argv arguments
+        char *userMessageFileArg = argv[1];
+        userSeedFileArg = argv[2];
+        
         // The user's input is copied to the messageFileName and seedFileName arrays, 
         // both loops use the same pointer named "filePointer" to copy the strings
         for( ; *userMessageFileArg != '\0'; userMessageFileArg++)
         {
             *filePointer = *userMessageFileArg;
             filePointer++;
+            // printf("%s", messageFileName);
+            // printf("\n");
         }
         *filePointer = '\0';
         for(filePointer = seedFileName; *userSeedFileArg != '\0'; userSeedFileArg++)
@@ -46,9 +52,8 @@ int main(int argc, char *argv[]) {
         }
         *filePointer = '\0';
     }
-
-    printf("Message File: %s\n", messageFileName);
-    printf("Seed File: %s\n", seedFileName);
+    // printf("Message File: %s\n", messageFileName);
+    // printf("Seed File: %s\n", seedFileName);
 
     FILE *messageFile = fopen(messageFileName, "r");
     if(messageFile == NULL){
@@ -67,6 +72,8 @@ int main(int argc, char *argv[]) {
     // print message and seed for debugging
     printf("Message: %s\n", message);
     printf("Seed: %s\n", seed);
+
+    // TODO: Implement key generation, encryption, and acknowledgment logic here
 
     // close files after reading
     fclose(messageFile);
