@@ -7,8 +7,17 @@
 // If the comparison is successful, Alice can be confident that Bob has received the accurate message. She then writes ”Acknowledgment Successful” in a 
     // file called ”Acknowledgment.txt.” Conversely, if the comparison fails, she records ”Acknowledgment Failed.”
 
+// Simplified steps
+//  - Read message and seed from files
+//  - Generate key 
+//  - Write key to file
+//  - Encrypt message using XOR with key
+//  - Write ciphertext to file
+//  - Read hash from file and compare
+
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <openssl/sha.h>
 #include <openssl/evp.h>
@@ -16,14 +25,20 @@
 #define Max_File_Name_Size 100
 
 // global variable declarations
-size_t messageSize;
-size_t seedSize;
+int messageSize;
+int seedSize;
 char messageFileName[Max_File_Name_Size]; 
 char seedFileName[Max_File_Name_Size];
 char *filePointer = messageFileName;
 
-// Function forward declaration
-unsigned char *readFile(FILE *messageFile, size_t *length);
+// Function declarations
+// unsigned char *readFile(FILE *file, size_t *length);
+unsigned char* Read_File (char fileName[], int *fileLen);
+void Write_File(char fileName[], char input[], int input_length);
+void Convert_to_Hex (char output[], unsigned char input[], int inputlength);
+void Show_in_Hex (char name[], unsigned char hex[], int hexlen);
+unsigned char* PRNG(unsigned char *seed, unsigned long seedlen, unsigned long prnglen);
+unsigned char* Hash_SHA256(unsigned char* input, unsigned long inputlen);
 
 int main(int argc, char *argv[]) {
 
@@ -57,19 +72,19 @@ int main(int argc, char *argv[]) {
     // printf("Message File: %s\n", messageFileName);
     // printf("Seed File: %s\n", seedFileName);
 
-    FILE *messageFile = fopen(messageFileName, "r");
-    if(messageFile == NULL){
-        printf("unable to open message file.");
-        return 0;
-    }
-    FILE *seedFile = fopen(seedFileName, "r");
-    if(seedFile == NULL){
-        printf("unable to open seed file.");
-        return 0;
-    }
+    // FILE *messageFile = fopen(messageFileName, "r");
+    // if(messageFile == NULL){
+    //     printf("unable to open message file.");
+    //     return 0;
+    // }
+    // FILE *seedFile = fopen(seedFileName, "r");
+    // if(seedFile == NULL){
+    //     printf("unable to open seed file.");
+    //     return 0;
+    // }
 
-    unsigned char *message = readFile(messageFile, &messageSize);
-    unsigned char *seed = readFile(seedFile, &seedSize);
+    unsigned char *message = Read_File(messageFileName, &messageSize);
+    unsigned char *seed = Read_File(seedFileName, &seedSize);
 
     // print message and seed for debugging
     printf("Message: %s\n", message);
@@ -85,7 +100,7 @@ int main(int argc, char *argv[]) {
         
         // Seed must be exactly 32 bytes
         if (seedSize != 32){
-            printf("Seed must be exactly 32 bytes, not %zu bytes.", seedSize);
+            printf("Seed must be exactly 32 bytes, not %d bytes.", seedSize);
             return 0;
         }
 
@@ -95,16 +110,30 @@ int main(int argc, char *argv[]) {
         printf("Memory allocation for key failed.");
         return 0;
     }
+    unsigned char *convertedKey = malloc(messageSize*2 + 1); // each byte becomes two hex chars + null terminator
+    if (!convertedKey) {
+        printf("Memory allocation for converted key failed.");
+        return 0;
+    }
+    unsigned char *convertedCiphertext = malloc(messageSize*2 + 1); // each byte becomes two hex chars + null terminator
+    if (!convertedCiphertext) {
+        printf("Memory allocation for converted ciphertext failed.");
+        return 0;
+    }
     
-    // Initialize OpenSSL EVP for ChaCha20 to generate key
-    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-    EVP_EncryptInit_ex(ctx, EVP_chacha20(), NULL, seed, NULL);
+    // Initial attempt to use openssl evp
+    // // Initialize OpenSSL EVP for ChaCha20 to generate key
+    // EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    // EVP_EncryptInit_ex(ctx, EVP_chacha20(), NULL, seed, NULL);
 
-    // Convert message length to int and generate key, passing the key buffer, 
-    // seed, message size, and cipher context structure
-    int outLength = (int)messageSize;
-    EVP_EncryptUpdate(ctx, key, &outLength, seed, messageSize);
-    EVP_CIPHER_CTX_free(ctx);
+    // // Convert message length to int and generate key, passing the key buffer, 
+    // // seed, message size, and cipher context structure
+    // int outLength = (int)messageSize;
+    // EVP_EncryptUpdate(ctx, key, &outLength, seed, messageSize);
+    // EVP_CIPHER_CTX_free(ctx);
+
+    // Use PRNG function to generate key
+    key = PRNG(seed, seedSize, messageSize);
 
     // // prints the key in hexadecimal (readable)
     // for (int i = 0; i < messageSize; i++) {
@@ -112,13 +141,20 @@ int main(int argc, char *argv[]) {
     // }
 
     // Write key to "Key.txt" in hexadecimal format
-    // FILE *keyFile = fopen("Key.txt", "w");
+    Convert_to_Hex((char *)convertedKey, key, messageSize);
+    Write_File("Key.txt", (char *)convertedKey, messageSize*2 + 1);
 
+    // XOR message with key to create ciphertext
+    unsigned char *ciphertext = malloc(messageSize);
+    for (int i = 0; i < messageSize; i++) {
+        ciphertext[i] = message[i] ^ key[i];
+    }
 
+    // Write ciphertext to "Ciphertext.txt" in hexadecimal format
+    Convert_to_Hex((char *)convertedCiphertext, ciphertext, messageSize);
+    Write_File("Ciphertext.txt", (char *)convertedCiphertext, messageSize*2 + 1);
+    
 
-    // close files after reading
-    fclose(messageFile);
-    fclose(seedFile);
 
     // free allocated memory
     free(message);
@@ -131,25 +167,111 @@ int main(int argc, char *argv[]) {
 
 // Helper functions
 
-unsigned char *readFile(FILE *file, size_t *length) {
-    // Move the file pointer to the end of the file
-    fseek(file, 0, SEEK_END);
-    // Get the current position of the file pointer (which is the size of the file)
-    messageSize = ftell(file);
-    *length = messageSize;
-    // Move the file pointer back to the beginning of the file
-    rewind(file);
-    if (messageSize <= 0){
-        printf("file is empty.");
-        return NULL;
+// unsigned char *readFile(FILE *file, size_t *length) {
+//     // Move the file pointer to the end of the file
+//     fseek(file, 0, SEEK_END);
+//     // Get the current position of the file pointer (which is the size of the file)
+//     messageSize = ftell(file);
+//     *length = messageSize;
+//     // Move the file pointer back to the beginning of the file
+//     rewind(file);
+//     if (messageSize <= 0){
+//         printf("file is empty.");
+//         return NULL;
+//     }
+
+//     // Allocate memory to hold the file contents, return NULL if malloc fails
+//     unsigned char *buffer = malloc(messageSize);
+//     if (!buffer) return NULL;
+
+//     // Easy library function to read file contents into buffer
+//     fread(buffer, 1, messageSize, file);
+
+//     return buffer;
+// }
+
+unsigned char* Read_File (char fileName[], int *fileLen)
+{
+    FILE *pFile;
+	pFile = fopen(fileName, "r");
+	if (pFile == NULL)
+	{
+		printf("Error opening file.\n");
+		exit(0);
+	}
+    fseek(pFile, 0L, SEEK_END);
+    int temp_size = ftell(pFile)+1;
+    fseek(pFile, 0L, SEEK_SET);
+    unsigned char *output = (unsigned char*) malloc(temp_size);
+	fgets(output, temp_size, pFile);
+	fclose(pFile);
+
+    *fileLen = temp_size-1;
+	return output;
+}
+
+void Write_File(char fileName[], char input[], int input_length){
+  FILE *pFile;
+  pFile = fopen(fileName,"w");
+  if (pFile == NULL){
+    printf("Error opening file. \n");
+    exit(0);
+  }
+  //fputs(input, pFile);
+  fwrite(input, 1, input_length, pFile);
+  fclose(pFile);
+}
+
+void Show_in_Hex (char name[], unsigned char hex[], int hexlen)
+{
+	printf("%s: ", name);
+	for (int i = 0 ; i < hexlen ; i++)
+   		printf("%02x", hex[i]);
+	printf("\n");
+}
+
+void Convert_to_Hex(char output[], unsigned char input[], int inputlength)
+{
+    for (int i=0; i<inputlength; i++){
+        sprintf(&output[2*i], "%02x", input[i]);
     }
+    printf("Hex format: %s\n", output);  //remove later
+}
 
-    // Allocate memory to hold the file contents, return NULL if malloc fails
-    unsigned char *buffer = malloc(messageSize);
-    if (!buffer) return NULL;
+unsigned char* PRNG(unsigned char *seed, unsigned long seedlen, unsigned long prnglen)
+{
+    // allocate cipher context and output buffer
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    unsigned char *pseudoRandomNumber = malloc(prnglen);
 
-    // Easy library function to read file contents into buffer
-    fread(buffer, 1, messageSize, file);
+    // initialize ChaCha20 with the seed and a zero nonce
+    unsigned char nonce[16] = {0};
+    EVP_EncryptInit_ex(ctx, EVP_chacha20(), NULL, seed, nonce);
 
-    return buffer;
+    // filling zero buffer with zeros
+    unsigned char zeros[prnglen];
+    memset(zeros, 0, prnglen);
+
+    int outlen;
+    // generate pseudo-random bytes 
+    EVP_EncryptUpdate(ctx, pseudoRandomNumber, &outlen, zeros, prnglen);
+    // finalize encryption
+    EVP_EncryptFinal(ctx, pseudoRandomNumber, &outlen);
+
+    // free cipher context
+    EVP_CIPHER_CTX_free(ctx);
+    return pseudoRandomNumber;
+}
+
+unsigned char* Hash_SHA256(unsigned char* input, unsigned long inputlen)
+{
+    unsigned char *hash = malloc(SHA256_DIGEST_LENGTH);
+
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
+    EVP_DigestUpdate(ctx, input, inputlen);
+    EVP_DigestFinal_ex(ctx, hash, NULL);
+    EVP_MD_CTX_free(ctx);
+
+    return hash;
 }
