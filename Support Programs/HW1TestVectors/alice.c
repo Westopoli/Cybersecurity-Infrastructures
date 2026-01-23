@@ -70,28 +70,10 @@ int main(int argc, char *argv[]) {
         }
         *filePointer = '\0';
     }
-    // printf("Message File: %s\n", messageFileName);
-    // printf("Seed File: %s\n", seedFileName);
-
-    // FILE *messageFile = fopen(messageFileName, "r");
-    // if(messageFile == NULL){
-    //     printf("unable to open message file.");
-    //     return 0;
-    // }
-    // FILE *seedFile = fopen(seedFileName, "r");
-    // if(seedFile == NULL){
-    //     printf("unable to open seed file.");
-    //     return 0;
-    // }
 
     unsigned char *message = Read_File(messageFileName, &messageSize);
     unsigned char *seed = Read_File(seedFileName, &seedSize);
 
-    // print message and seed for debugging
-    printf("Message: %s\n", message);
-    printf("Seed: %s\n", seed);
-
-    // TODO: Implement key generation, encryption, and acknowledgment logic here
     // Edge case checks
         // Message must be greater than or equal to 32 bytes
         if (messageSize < 32){
@@ -111,12 +93,12 @@ int main(int argc, char *argv[]) {
         printf("Memory allocation for key failed.");
         return 0;
     }
-    char *convertedKey = malloc(messageSize*2 + 1); // each byte becomes two hex chars + null terminator
+    char *convertedKey = malloc(messageSize); 
     if (!convertedKey) {
         printf("Memory allocation for converted key failed.");
         return 0;
     }
-    char *convertedCiphertext = malloc(messageSize*2 + 1); // each byte becomes two hex chars + null terminator
+    char *convertedCiphertext = malloc(messageSize); 
     if (!convertedCiphertext) {
         printf("Memory allocation for converted ciphertext failed.");
         return 0;
@@ -136,29 +118,58 @@ int main(int argc, char *argv[]) {
     // Use PRNG function to generate key
     key = PRNG(seed, seedSize, messageSize);
 
-    // // prints the key in hexadecimal (readable)
-    // for (int i = 0; i < messageSize; i++) {
-    //     printf("%02x", key[i]);
-    // }
-
-    // Write key to "Key.txt" in hexadecimal format
+    // Write key to "Key.txt" in hexadecimal format, every byte becomes two hex characters
     Convert_to_Hex(convertedKey, key, messageSize);
-    Write_File("Key.txt", convertedKey, messageSize*2 + 1);
+    Write_File("Key.txt", convertedKey, messageSize);
 
     // XOR message with key to create ciphertext
     unsigned char *ciphertext = malloc(messageSize);
+    if(!ciphertext) {
+        printf("Memory allocation for ciphertext failed.");
+        return 0;
+    }
     for (int i = 0; i < messageSize; i++) {
         ciphertext[i] = message[i] ^ key[i];
     }
 
-    // Write ciphertext to "Ciphertext.txt" in hexadecimal format
+    // // Write ciphertext to "Ciphertext.txt" in hexadecimal format
     Convert_to_Hex(convertedCiphertext, ciphertext, messageSize);
-    Write_File("Ciphertext.txt", convertedCiphertext, messageSize*2 + 1);
+    Write_File("Ciphertext.txt", convertedCiphertext, messageSize);
 
     sleep(1);
 
     // Read Bob's computed hash from "Hash.txt"
 
+
+
+
+
+
+// print section for debugging
+    // SEED
+    // printf("Seed: %s\n", seed);
+
+    // SEED SIZE
+    // printf("Seed size: %d bytes\n", seedSize);
+
+    // MESSAGE
+    printf("Message: %s\n", message);
+
+    // MESSAGE SIZE
+    // printf("Message size: %d bytes\n", messageSize);
+
+    // CIPHERTEXT
+    // printf("Ciphertext: %s\n", ciphertext);
+
+    // CIPHERTEXT SIZE
+    // printf("Ciphertext size: %d bytes\n", messageSize);
+
+    // KEY
+    // printf("Key: ");
+    // for (int i = 0; i < messageSize; i++) {
+    //     printf("%02x", key[i]);
+    // }
+    // printf("\n");
 
 
     // free allocated memory
@@ -240,7 +251,7 @@ void Convert_to_Hex(char output[], unsigned char input[], int inputlength)
     for (int i=0; i<inputlength; i++){
         sprintf(&output[2*i], "%02x", input[i]);
     }
-    printf("Hex format: %s\n", output);  //remove later
+    // printf("Hex format: %s\n", output);  //remove later
 }
 
 unsigned char* PRNG(unsigned char *seed, unsigned long seedlen, unsigned long prnglen)
