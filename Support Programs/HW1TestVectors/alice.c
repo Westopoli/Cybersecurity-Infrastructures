@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <openssl/sha.h>
 #include <openssl/evp.h>
@@ -110,12 +111,12 @@ int main(int argc, char *argv[]) {
         printf("Memory allocation for key failed.");
         return 0;
     }
-    unsigned char *convertedKey = malloc(messageSize*2 + 1); // each byte becomes two hex chars + null terminator
+    char *convertedKey = malloc(messageSize*2 + 1); // each byte becomes two hex chars + null terminator
     if (!convertedKey) {
         printf("Memory allocation for converted key failed.");
         return 0;
     }
-    unsigned char *convertedCiphertext = malloc(messageSize*2 + 1); // each byte becomes two hex chars + null terminator
+    char *convertedCiphertext = malloc(messageSize*2 + 1); // each byte becomes two hex chars + null terminator
     if (!convertedCiphertext) {
         printf("Memory allocation for converted ciphertext failed.");
         return 0;
@@ -141,8 +142,8 @@ int main(int argc, char *argv[]) {
     // }
 
     // Write key to "Key.txt" in hexadecimal format
-    Convert_to_Hex((char *)convertedKey, key, messageSize);
-    Write_File("Key.txt", (char *)convertedKey, messageSize*2 + 1);
+    Convert_to_Hex(convertedKey, key, messageSize);
+    Write_File("Key.txt", convertedKey, messageSize*2 + 1);
 
     // XOR message with key to create ciphertext
     unsigned char *ciphertext = malloc(messageSize);
@@ -151,9 +152,13 @@ int main(int argc, char *argv[]) {
     }
 
     // Write ciphertext to "Ciphertext.txt" in hexadecimal format
-    Convert_to_Hex((char *)convertedCiphertext, ciphertext, messageSize);
-    Write_File("Ciphertext.txt", (char *)convertedCiphertext, messageSize*2 + 1);
-    
+    Convert_to_Hex(convertedCiphertext, ciphertext, messageSize);
+    Write_File("Ciphertext.txt", convertedCiphertext, messageSize*2 + 1);
+
+    sleep(1);
+
+    // Read Bob's computed hash from "Hash.txt"
+
 
 
     // free allocated memory
