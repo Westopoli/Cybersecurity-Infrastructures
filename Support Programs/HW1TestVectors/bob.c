@@ -88,15 +88,12 @@ int main(int argc, char *argv[]) {
         plaintext[i] = ciphertext[i] ^ key[i];
     }
 
-    // CURRENT ISSUE - plaintext is not correct after decryption, don't know why
-    // Keys are different between Alice and Bob even though they use the same seed
-    // which may be causing the incorrect plaintext
-    Show_in_Hex("Decrypted Plaintext", plaintext, ciphertextSize);
+    
 
 
 // print section for debugging
     // SEED
-    // printf("Seed: %s\n", seed);
+    printf("Seed: %s\n", seed);
 
     // SEED SIZE
     // printf("Seed size: %d bytes\n", seedSize);
@@ -108,15 +105,16 @@ int main(int argc, char *argv[]) {
     // printf("Ciphertext size: %d bytes\n", ciphertextSize);
 
     // KEY
-    // printf("Key: ");
-    // for (int i = 0; i < ciphertextSize; i++) {
-    //     printf("%02x", key[i]);
-    // }
-    // printf("\n");
+    printf("Key: ");
+    for (int i = 0; i < ciphertextSize; i++) {
+        printf("%02x", key[i]);
+    }
+    printf("\n");
         
 
+    // CURRENT ISSUE - Incorrect plaintext output
     // Write plaintext to "Plaintext.txt"
-    //Write_File("Plaintext.txt", (char *)plaintext, ciphertextSize);
+    Write_File("Plaintext.txt", (char *)plaintext, ciphertextSize);
 
 
 
