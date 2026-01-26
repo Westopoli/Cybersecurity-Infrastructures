@@ -33,6 +33,7 @@ char *filePointer = seedFileName;
 unsigned char* Read_File (char fileName[], int *fileLen);
 void Write_File(char fileName[], char input[], int input_length);
 void Convert_to_Hex (char output[], unsigned char input[], int inputlength);
+void Convert_to_Binary(unsigned char output[], char input[], int inputlength);
 void Show_in_Hex (char name[], unsigned char hex[], int hexlen);
 unsigned char* PRNG(unsigned char *seed, unsigned long seedlen, unsigned long prnglen);
 unsigned char* Hash_SHA256(unsigned char* input, unsigned long inputlen);
@@ -68,6 +69,10 @@ int main(int argc, char *argv[]) {
 
     // Read ciphertext from "Ciphertext.txt"
     unsigned char *ciphertext = Read_File("Ciphertext.txt", &ciphertextSize);
+
+    Convert_to_Binary(ciphertext, (char *)ciphertext, ciphertextSize);
+
+    ciphertextSize = ciphertextSize / 2; // Adjust size after converting from hex to binary
     
     // Generate key using PRNG
     unsigned char *key = malloc(ciphertextSize);
@@ -102,7 +107,7 @@ int main(int argc, char *argv[]) {
     // printf("Ciphertext: %s\n", ciphertext);
 
     // CIPHERTEXT SIZE
-    // printf("Ciphertext size: %d bytes\n", ciphertextSize);
+    printf("Ciphertext size: %d bytes\n", ciphertextSize);
 
     // KEY
     printf("Key: ");
@@ -111,13 +116,11 @@ int main(int argc, char *argv[]) {
     }
     printf("\n");
         
+    // PLAINTEXT
+    printf("Plaintext: %s\n", plaintext);
 
-    // CURRENT ISSUE - Incorrect plaintext output
     // Write plaintext to "Plaintext.txt"
     Write_File("Plaintext.txt", (char *)plaintext, ciphertextSize);
-
-
-
   
     free(seed);
     return 0;
@@ -171,6 +174,18 @@ void Convert_to_Hex(char output[], unsigned char input[], int inputlength)
         sprintf(&output[2*i], "%02x", input[i]);
     }
     printf("Hex format: %s\n", output);  //remove later
+}
+
+void Convert_to_Binary(unsigned char output[], char input[], int inputlength)
+{
+    for (int i=0; i<inputlength/2; i++){
+        sscanf(&input[2*i], "%2hhx", &output[i]);
+    }
+    // printf("Binary format: ");  //remove later
+    // for (int i = 0; i < inputlength/2; i++) {
+    //     printf("%02x", output[i]);
+    // }
+    // printf("\n");
 }
 
 unsigned char* PRNG(unsigned char *seed, unsigned long seedlen, unsigned long prnglen)
