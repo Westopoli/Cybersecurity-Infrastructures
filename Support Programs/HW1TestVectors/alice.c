@@ -93,12 +93,12 @@ int main(int argc, char *argv[]) {
         printf("Memory allocation for key failed.");
         return 0;
     }
-    char *convertedKey = malloc(messageSize); 
+    char *convertedKey = malloc(messageSize * 2); 
     if (!convertedKey) {
         printf("Memory allocation for converted key failed.");
         return 0;
     }
-    char *convertedCiphertext = malloc(messageSize); 
+    char *convertedCiphertext = malloc(messageSize * 2); 
     if (!convertedCiphertext) {
         printf("Memory allocation for converted ciphertext failed.");
         return 0;
@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
 
     // Write key to "Key.txt" in hexadecimal format, every byte becomes two hex characters
     Convert_to_Hex(convertedKey, key, messageSize);
-    Write_File("Key.txt", convertedKey, messageSize);
+    Write_File("Key.txt", convertedKey, messageSize * 2);
 
     // XOR message with key to create ciphertext
     unsigned char *ciphertext = malloc(messageSize);
@@ -133,7 +133,8 @@ int main(int argc, char *argv[]) {
     }
 
     // Write ciphertext to "Ciphertext.txt" in hexadecimal format
-    Write_File("Ciphertext.txt", convertedCiphertext, messageSize);
+    Convert_to_Hex(convertedCiphertext, ciphertext, messageSize);
+    Write_File("Ciphertext.txt", convertedCiphertext, messageSize * 2);
 
     sleep(1);
 
@@ -152,7 +153,7 @@ int main(int argc, char *argv[]) {
     // printf("Seed size: %d bytes\n", seedSize);
 
     // MESSAGE
-    printf("Message: %s\n", message);
+    // printf("Message: %s\n", message);
 
     // MESSAGE SIZE
     // printf("Message size: %d bytes\n", messageSize);
