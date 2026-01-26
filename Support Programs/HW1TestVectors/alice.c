@@ -132,8 +132,7 @@ int main(int argc, char *argv[]) {
         ciphertext[i] = message[i] ^ key[i];
     }
 
-    // // Write ciphertext to "Ciphertext.txt" in hexadecimal format
-    Convert_to_Hex(convertedCiphertext, ciphertext, messageSize);
+    // Write ciphertext to "Ciphertext.txt" in hexadecimal format
     Write_File("Ciphertext.txt", convertedCiphertext, messageSize);
 
     sleep(1);
@@ -165,11 +164,11 @@ int main(int argc, char *argv[]) {
     // printf("Ciphertext size: %d bytes\n", messageSize);
 
     // KEY
-    // printf("Key: ");
-    // for (int i = 0; i < messageSize; i++) {
-    //     printf("%02x", key[i]);
-    // }
-    // printf("\n");
+    printf("Key: ");
+    for (int i = 0; i < messageSize; i++) {
+        printf("%02x", key[i]);
+    }
+    printf("\n");
 
 
     // free allocated memory
