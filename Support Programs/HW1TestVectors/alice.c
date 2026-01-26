@@ -28,6 +28,7 @@
 // global variable declarations
 int messageSize;
 int seedSize;
+int hashSize;
 char messageFileName[Max_File_Name_Size]; 
 char seedFileName[Max_File_Name_Size];
 char *filePointer = messageFileName;
@@ -139,10 +140,23 @@ int main(int argc, char *argv[]) {
     sleep(1);
 
     // Read Bob's computed hash from "Hash.txt"
+    unsigned char *bobHash = Read_File("Hash.txt", &hashSize);
 
+    // printf("bobs hash: %s\n", bobHash);
 
+    // Hash plaintext using SHA256
+    unsigned char *aliceHash = Hash_SHA256(message, messageSize);
+    char* hexedAliceHash = malloc(SHA256_DIGEST_LENGTH * 2);
 
+    Convert_to_Hex(hexedAliceHash, aliceHash, SHA256_DIGEST_LENGTH);
 
+    if (memcmp(hexedAliceHash, bobHash, SHA256_DIGEST_LENGTH) == 0) {
+        Write_File("Acknowledgment.txt", "Acknowledgment Successful", 24);
+        printf("Acknowledgment Successful");
+    } else {
+        Write_File("Acknowledgment.txt", "Acknowledgment Failed.", 21);
+        printf("Acknowledgment Failed.");
+    }
 
 
 // print section for debugging
@@ -165,17 +179,23 @@ int main(int argc, char *argv[]) {
     // printf("Ciphertext size: %d bytes\n", messageSize);
 
     // KEY
-    printf("Key: ");
-    for (int i = 0; i < messageSize; i++) {
-        printf("%02x", key[i]);
-    }
-    printf("\n");
+    // printf("Key: ");
+    // for (int i = 0; i < messageSize; i++) {
+    //     printf("%02x", key[i]);
+    // }
+    // printf("\n");
 
 
     // free allocated memory
     free(message);
     free(seed);
     free(key);
+    free(ciphertext);
+    free(convertedKey);
+    free(convertedCiphertext);
+    free(bobHash);
+    free(aliceHash);
+    free(hexedAliceHash);
     
 
     return 0;

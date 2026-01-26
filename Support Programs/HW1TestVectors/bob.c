@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
 
 // print section for debugging
     // SEED
-    printf("Seed: %s\n", seed);
+    // printf("Seed: %s\n", seed);
 
     // SEED SIZE
     // printf("Seed size: %d bytes\n", seedSize);
@@ -107,22 +107,35 @@ int main(int argc, char *argv[]) {
     // printf("Ciphertext: %s\n", ciphertext);
 
     // CIPHERTEXT SIZE
-    printf("Ciphertext size: %d bytes\n", ciphertextSize);
+    // printf("Ciphertext size: %d bytes\n", ciphertextSize);
 
     // KEY
-    printf("Key: ");
-    for (int i = 0; i < ciphertextSize; i++) {
-        printf("%02x", key[i]);
-    }
-    printf("\n");
+    // printf("Key: ");
+    // for (int i = 0; i < ciphertextSize; i++) {
+    //     printf("%02x", key[i]);
+    // }
+    // printf("\n");
         
     // PLAINTEXT
-    printf("Plaintext: %s\n", plaintext);
+    // printf("Plaintext: %s\n", plaintext);
 
     // Write plaintext to "Plaintext.txt"
     Write_File("Plaintext.txt", (char *)plaintext, ciphertextSize);
+
+    // Hash plaintext using SHA256
+    unsigned char *hash = Hash_SHA256(plaintext, ciphertextSize);
+    char* hexedHash = malloc(SHA256_DIGEST_LENGTH * 2);
+
+    Convert_to_Hex(hexedHash, hash, SHA256_DIGEST_LENGTH);
+
+    Write_File("Hash.txt", hexedHash, SHA256_DIGEST_LENGTH * 2);
   
     free(seed);
+    free(key);
+    free(ciphertext);
+    free(plaintext);
+    free(hash);
+    free(hexedHash);
     return 0;
 }
 
@@ -173,7 +186,7 @@ void Convert_to_Hex(char output[], unsigned char input[], int inputlength)
     for (int i=0; i<inputlength; i++){
         sprintf(&output[2*i], "%02x", input[i]);
     }
-    printf("Hex format: %s\n", output);  //remove later
+    // printf("Hex format: %s\n", output);  //remove later
 }
 
 void Convert_to_Binary(unsigned char output[], char input[], int inputlength)
