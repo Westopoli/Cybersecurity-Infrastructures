@@ -1,0 +1,14 @@
+*.vbox
+*.vbox-prev
+*.zip
+.DS_Store
+c_cpp_properties.json
+*.nvram
+*.log
+*.log.1
+*.log.2
+*.vdi
+*.viso
+*.cfg
+Unattended-217adf94-7c46-4163-a7b7-8fc7798413f4-user-data
+Unattended-217adf94-7c46-4163-a7b7-8fc7798413f4-vboxpostinstall.sh
