@@ -38,11 +38,11 @@ int main(int argc, char *argv[]) {
     // Write the challenge to puzzle_challenge.txt as a hex string
     // printf("convert bytes to hex\n");
     Write_File("puzzle_challenge.txt", (char *)challenge, challenge_len);
-    printf("write to puzzle_challenge.txt\n");
+    // printf("write to puzzle_challenge.txt\n");
 
     // Write the difficulty to puzzle_k.txt
     Write_Int_To_File("puzzle_k.txt", difficulty);
-    printf("write to puzzle_k.txt\n");
+    // printf("write to puzzle_k.txt\n");
     
 
     return 0;
