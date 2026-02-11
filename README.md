@@ -1,7 +1,7 @@
 **Main Progams** 
   - If you're going to skim something, skim these. The projects are designed to demonstrate understading of cybersecurity concepts, and involved the most development time.
 
-    **Digital Signature Via Hash Program**
+    **Digital Signature Via Hash Program - Output Feedback Mode**
     - To run, navigate to VerifySolution folder in terminal
     - Run following command in terminal:
     
