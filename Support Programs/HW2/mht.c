@@ -7,12 +7,13 @@
 #include <openssl/sha.h>
 #include <openssl/evp.h>
 
-#define Max_File_Size 100
+#define MESSAGE_BYTE_SIZE 32
 
 // Function Declaration
 char* Read_File(const char *filename, int *length); 
 int Write_File(const char *filename, const char *data);
-int Compute_SHA256(const unsigned char *data, int data_len, unsigned char *output);
+unsigned char* Hash_SHA256(unsigned char* input, unsigned long inputlen);
+int Bytes_to_Hex(const unsigned char *bytes, int byte_len, char *hex);
 
 
 int main(int argc, char* argv[]) {
@@ -25,54 +26,108 @@ int main(int argc, char* argv[]) {
     /******************
         OFFLINE PHASE
     *******************/
-    char* messageFileName = argv[1];
-    char* indexArg = argv[2];
+    char* message_filename = argv[1];
+    char* index_arg = argv[2];
+
+    // Verify index argument format
 
     // Read from message file
-    int messageLength;
-    unsigned char* messageWhole = Read_File(messageFileName, &messageLength);
+    int message_length;
+    unsigned char* message_whole = Read_File(message_filename, &message_length);
 
     // Verify message length
 
-    /* Create Merkle Hash Tree as array-based binary tree
-    Index 0 = root
-    Index 1-2 = level 1
-    Index 3-4 = level 2
-    Index 7-14 = leaves
-    */
-    // Program is designed for an 8-leaf MHT
+    /* Initial attempt to build MHT and calc leaf hashes
     char* MHT[15] = {NULL};
-
-    // Read each line of data, hash it, store in tree leaves
     char* token = strtok(messageWhole, "\n");
     char* hash = NULL;
     int i = 7;
     while(token != NULL){
-        Compute_SHA256(token, sizeof(token), hash);
-        // Copy hash to MHT[i]
-        // Increment i
-        // Get next token
+        hash = Hash_SHA256(token, strlen(token) + 1);
+        MHT[i] = malloc(Message_Byte_Size);
+        if(!MHT[i]){
+            printf("Memory allocation for MHT node failed.");
+            return 0;
+        }
+        memcpy(MHT[i++], hash, Message_Byte_Size);
+        free(hash);
+        printf("%s[String End]\n", MHT[i-1]); 
+        token = strtok(NULL, "\n"); 
+    }*/
+     
+    /* Merkle Hash Tree using array-based binary tree 
+    Rows 7-14 = leaves, data indices 1-8
+    Rows 3-6 = level 2
+    Rows 1-2 = level 1
+    Row 0 = root
+    */
+    /*Using a 2D array this time instead of 1D array of pointers since all elements 
+    will contain same length hashes. Avoids memory allocation and increases simplicity.*/
+    unsigned char MHT[15][MESSAGE_BYTE_SIZE];
+
+    // Parse whole message into 32 byte messages
+    unsigned char* token = strtok(message_whole, "\n");
+    unsigned char* hash;
+    
+    // MHT Rows 7-14 align with data indices 1-8
+    int i = 7;
+    while(token != NULL){
+        hash = Hash_SHA256(token, MESSAGE_BYTE_SIZE);
+        memcpy(MHT[i++], hash, MESSAGE_BYTE_SIZE);
+        free(hash);
+        token = strtok(NULL, "\n");
+    }
+    
+    // Holds concatenated children input for hash
+    unsigned char input[2 * MESSAGE_BYTE_SIZE];
+
+    // Calculate hashes for rest of tree
+    for(i = 6; i >= 0; i--){
+        // Concatenate left and right child of MHT[i] into input
+        memcpy(input, MHT[2 * i + 1], MESSAGE_BYTE_SIZE);  // Left child
+        memcpy(input + MESSAGE_BYTE_SIZE, MHT[2 * i + 2], MESSAGE_BYTE_SIZE);  // Right child
+        
+        // Hash children and store in MHT
+        hash = Hash_SHA256(input, 2 * MESSAGE_BYTE_SIZE);
+        memcpy(MHT[i], hash, MESSAGE_BYTE_SIZE);
+        free(hash);
     }
 
-    /*Calculate root*/
-    // Declare input string
-    // for i from 6 to 0
-        // Concatenate left, then right children of MHt[i] to input
-        // Hash input and store into MHT[i]
-        // Reset input string
-    
     // Convert root to hex string
+    unsigned char hex[MESSAGE_BYTE_SIZE]; 
+    Bytes_to_Hex(MHT[0], MESSAGE_BYTE_SIZE, hex);
+
     // Write root hex string to file
+    Write_File("TheRoot.txt", hex);
 
     /******************
         ONLINE PHASE
     *******************/
     // Convert input argument index to MHT leaf index
+    i = atoi(&index_arg[1]);
+    i += 6;
 
-    // [Still need to verify path format]
-    // [Still need to plan out obtaining path]
-    // ...
+    // Calculate path
+    unsigned char path[6 * MESSAGE_BYTE_SIZE + 3];
+    while(i != 0){
+        if(i % 2 == 1)  // i odd --> left child
+            hash = MHT[i + 1];
+        else            // i even --> right child
+            hash = MHT[i - 1];
+        printf("Current i = %d\n", i);
+        Bytes_to_Hex(hash, MESSAGE_BYTE_SIZE, hex);
+        strcat(path, hex);
+        strcat(path, "\n");
+        
+        i = (i - 1) / 2;    // Parent
+    }
+    
+    // Write path hex string to file
+    Write_File("ThePath.txt", path);
+
     // Free pointers
+    free(message_whole);
+    
     return 0;
 }
 
@@ -125,7 +180,9 @@ int Write_File(const char *filename, const char *data) {
 }
 
 // SHA256 hash
-int Compute_SHA256(const unsigned char *data, int data_len, unsigned char *output) {
+unsigned char* Hash_SHA256(unsigned char* input, unsigned long inputlen)
+{
+    unsigned char *hash = malloc(SHA256_DIGEST_LENGTH);
 
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
@@ -133,5 +190,13 @@ int Compute_SHA256(const unsigned char *data, int data_len, unsigned char *outpu
     EVP_DigestFinal_ex(ctx, hash, NULL);
     EVP_MD_CTX_free(ctx);
 
-    return 0;
+    return hash;
+}
+
+int Bytes_to_Hex(const unsigned char *bytes, int byte_len, char *hex) {
+    for (int i = 0; i < byte_len; i++) {
+        sprintf(hex + (i * 2), "%02x", bytes[i]);
+    }
+    hex[byte_len * 2] = '\0';
+    return byte_len * 2;
 }
