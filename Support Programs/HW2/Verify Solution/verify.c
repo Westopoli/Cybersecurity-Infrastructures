@@ -1,29 +1,26 @@
-// Puzzle Solving Program - Client Side
+// Puzzle Generation Program
+// This program acts as the server's verification of the client's proof of computation for DoS 
+// prevention. It reads the challenge (similar to the client) and computes the hash
+// with the client's nonce and checks that it has the correct number of leading 0 bits.
 
-// Client program to prove there were computations spent solving the puzzle, DoS for
-// prevention reads the challenge and difficulty, computes the puzzle solution by 
-// finding the right nonce (k leading bits are 0), and write solution to repsective 
-// files.
-
-// Psuedocode: 
-//  1. Read challenge from puzzle_challenge.txt as a char (hex string) and convert to byte array
-//  2. Read difficulty from puzzle_k.txt as an integer
-//  3. Starting from 0, increment values 
-    //  a. Construct data = challenge || nonce
-    //  b. Compute SHA256(data)
-    //  c. Check if hash has k leading zero bits
-// 4. To check: 
-    // Full 0 bytes k/8
-    // Partial bits k%8
-    // Use bit masking for partial byte check
-// 5. Write nonce to solution_nonce.txt as Hex string 
-// 6. Write iteration count to solution_iterations.txt as ASCII integer 
+// Pseudocode
+// Input: Challenge, difficulty k, solution nonce
+// Output: Accept or Reject
+// 1) Read challenge from puzzle challenge.txt
+// 2) Read difficulty k from puzzle k.txt
+// 3) Read nonce from solution nonce.txt
+// 4) Construct data = challenge || nonce
+// 5) Compute hash = SHA256(data)
+// 6) Check if hash has k leading zero bits
+// 7) If yes: Write ”ACCEPT”, exit 0
+// 8) If no: Write ”REJECT”, exit 1
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
+#include <math.h>
 
 char* Read_File(const char *filename, int *length);
 void Write_File(char fileName[], char input[], int input_length);
@@ -36,136 +33,95 @@ void Write_Int_To_File(const char *filename, int value);
 void Int_To_Binary(int n, char *binary);
 void Count_Leading_Zeros(unsigned char *hash, int *zeros);
 void Print_Byte_Binary(unsigned char byte);
+void Print_Hex(const char *label, const unsigned char *data, int len);
 
 int main(int argc, char *argv[]) {
-
+    
     char *userChallengeFileArg = argv[1];
     char *userDifficultyFileArg = argv[2];
+    char *userNonceFileArg = argv[3];
 
     // Read challenge as char 
     int challenge_hex_len;
     int difficulty;
     char *challenge_in_hex = Read_File(userChallengeFileArg, &challenge_hex_len);
-    // for(int i = 0; i < sizeof(challenge_in_hex); i++){
-    //     printf("%d", challenge_in_hex[i]);
-    // }
-    // printf("\n");
-    char *challenge_in_bytes = (char *)malloc(challenge_hex_len / 2);
+
+    char *challenge_in_bytes = (char *)malloc(challenge_hex_len * 2);
     int challenge_len = Hex_To_Bytes(challenge_in_hex, (unsigned char *)challenge_in_bytes, challenge_hex_len);
-    // for(int i = 0; i < sizeof(challenge_in_bytes); i++){
-    //     printf("%d", challenge_in_bytes[i]);
-    // }
-    // printf("\n");
 
     // Read difficulty as integer
     difficulty = Read_Int_From_File(userDifficultyFileArg);
-    // printf("Difficulty Int: %d\n", difficulty);
 
-    // Starting from nonce = 0, increment and check for solution
     unsigned char hash[SHA256_DIGEST_LENGTH];
-    unsigned int nonce = 0;
-    unsigned long long iterations = 0;
-    int found = 1;
-    int zeros = 0;
-    
-    while (found) {
-        // construct hash input = challenge || nonce
-        for( ; iterations < 1ULL << (difficulty - 1); iterations++) {
-            printf("Iteration: %llu\n", iterations);
-            unsigned char data[challenge_len + sizeof(nonce)];
-            memcpy(data, challenge_in_bytes, challenge_len);
-            memcpy(data + challenge_len, &nonce, sizeof(nonce));
-            // int bits_we_care_about = difficulty % 8;
+    int nonce_hex_len;
+    char *nonce_hex = Read_File(userNonceFileArg, &nonce_hex_len);
 
-            // compute SHA256 hash
-            Compute_SHA256(data, sizeof(data), hash);
-            nonce++;
+    // // Debugging different nonce values between programs
+    // const char *label = "Hex";
+    // Print_Hex(label, (const unsigned char*)nonce_hex, nonce_hex_len);
 
-            Count_Leading_Zeros(hash, &zeros);
+    // Hex to Bytes 
+    unsigned char nonce_bytes[nonce_hex_len / 2];
+    unsigned int nonce_len = Hex_To_Bytes(nonce_hex, nonce_bytes, nonce_hex_len);
 
-            // print hash, nonce, and leading zeros
-            printf("Hash: ");
-            for(int i = 0; i < sizeof(hash); i++) {
-                Print_Byte_Binary(hash[i]);
-            }
-            printf("\n");
-            printf("Nonce: %d", nonce);
-            printf("Leading Zeros: %d", zeros);
-
-            if(zeros > difficulty) {
-                found = 0;
-                break;
-            }
-
-            // for(int i = 0; i < challenge_len; i++) {
-            //     // before iterating through this hash, check if we've already found enough zero bits
-            //     // if(zero_counter >= difficulty) {
-            //     //     found = 0;
-            //     //     break;
-            //     // }
-
-            //     // // Full byte level check
-            //     // if (hash[i] == 0) {
-            //     //     zero_counter += 8;
-            //     //     printf("\nFRONT IS 0\n");
-            //     //     printf("%d\n", hash[i]);
-            //     //     break;
-            //     // }
-
-            //     // // Get the relevant bits from the current byte
-            //     // unsigned char *temp_byte_digits = malloc(sizeof(char) * 8);
-                
-            //     // // unnecessary conversion
-            //     // // Hex_To_Bytes((char *)hash, temp_byte_digits, 2);
-            //     // // for(int i = 0; i < 8; i++){
-            //     // //     printf("%c", temp_byte_digits[i]);
-            //     // // }
-            //     // // printf("\n");
-
-            //     // // Partial bit level check
-            //     // if (partial_zero_counter < bits_we_care_about) {
-            //     //     for(int i = 0; i < bits_we_care_about; i++) {
-            //     //         if (temp_byte_digits[i] == 0)
-            //     //             partial_zero_counter++;
-            //     //     }
-            //     // }
-            //     // // found can be set to one because if we get to this point, all full bytes before it are zero
-            //     // if (partial_zero_counter == bits_we_care_about) {
-            //     //     zero_counter += bits_we_care_about;
-            //     //     found = 0;
-            //     //     break;
-            //     // }
-
-                
-            // }   
-        }
-        // if(iterations == 2047 && found == 0)
-        //     break;
-    }
-
-    // Write nonce to solution_nonce.txt as hex string
-    char nonce_as_bytes[sizeof(nonce) * 2 + 1];
-    Int_To_Binary(nonce, nonce_as_bytes);
-    Bytes_To_Hex((unsigned char *)&nonce, sizeof(nonce), nonce_as_bytes);
-    Write_File("solution_nonce.txt", nonce_as_bytes, sizeof(nonce_as_bytes));
-
-    // int testing = 127;
-    // char *binary = (char *)malloc(257);
-    // Int_To_Binary(testing, binary);
-    // for(int i = 0; i < 256; i++) {
-    //     printf("%c", binary[i]);
+    // printf("Difficulty: %d\n", difficulty);
+    // printf("Nonce: ");
+    // for(int i = 0; i < nonce_len; i++) {
+    //     Print_Byte_Binary(nonce_bytes[i]);
     // }
     // printf("\n");
 
-    // Write iteration count to solution_iterations.txt as ASCII integer
-    Write_Int_To_File("solution_iterations.txt", iterations);
+    // print challenge_len and nonce_len for debugging
+    // printf("Challenge Len: %d\n", challenge_len);
+    // printf("Nonce Len (%%u): %u\n", nonce_len);
 
+    // // print challenge_in_bytes for debugging
+    // printf("Challenge Bytes: ");
+    // for(int i = 0; i < challenge_len; i++) {
+    //         Print_Byte_Binary(challenge_in_bytes[i]);
+    // }
+    // printf("\n");
+
+    // construct data = challenge || nonce
+    unsigned char data[challenge_len + nonce_len];
+    memcpy(data, challenge_in_bytes, challenge_len);
+    memcpy(data + challenge_len, nonce_bytes, nonce_len);
+
+    // printf("Data: ");
+    // for(int i = 0; i < sizeof(data); i++) {
+    //     Print_Byte_Binary(data[i]);
+    // }
+    // printf("\n");
+
+    Compute_SHA256(data, sizeof(data), hash);
+
+    printf("Hash: ");
+    for(int i = 0; i < sizeof(hash); i++) {
+        Print_Byte_Binary(hash[i]);
+    }
+    printf("\n");
+
+    int zeros = 0;
+    Count_Leading_Zeros(hash, &zeros);
+
+    char accept[6] = "ACCEPT";
+    char reject[6] = "REJECT";
+
+    if(zeros == difficulty) {
+        Write_File("verification_result.txt", accept, sizeof(accept));
+        exit(0);
+    }
+    else {
+        Write_File("verification_result.txt", reject, sizeof(reject));
+        exit(1);
+    }
+
+    free(challenge_in_hex);
     free(challenge_in_bytes);
-    // free(binary);
-
+    free(nonce_hex);
+        
     return 0;
-}
-
+}  
 
 /*
     File I/O Functions
@@ -201,22 +157,14 @@ char* Read_File(const char *filename, int *length) {
     
     *length = read_size;
     fclose(file);
+
+    // printf("Iteration\n");
+    // for(int i = 0; i < *length; i++) {
+    //     Print_Byte_Binary(buffer[i]);
+    // } 
+    // printf("\n");
     return buffer;
 }
-
-// This function produced a segmentation fault
-//  // Write string to file
-// int Write_File(const char *filename, const char *data) {
-//     FILE *file = fopen(filename, "w");
-//     if (!file) {
-//         fprintf(stderr, "Error: Cannot open file %s for writing\n", filename);
-//         return -1;
-//     }
-    
-//     fprintf(file, "%s", data);
-//     fclose(file);
-//     return 0;
-// }
 
 void Write_File(char fileName[], char input[], int input_length){
   FILE *pFile;

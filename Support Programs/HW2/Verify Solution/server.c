@@ -1,19 +1,9 @@
 // Puzzle Generation Program
-// This program acts as the server's verification of the client's proof of computation for DoS 
-// prevention. It reads the challenge (similar to the client) and computes the hash
-// with the client's nonce and checks that it has the correct number of leading 0 bits.
+//      note: this is the first of 3 programs working together to implement a client-server puzzle for DDoS prevention.
 
-// Pseudocode
-// Input: Challenge, difficulty k, solution nonce
-// Output: Accept or Reject
-// 1) Read challenge from puzzle challenge.txt
-// 2) Read difficulty k from puzzle k.txt
-// 3) Read nonce from solution nonce.txt
-// 4) Construct data = challenge || nonce
-// 5) Compute hash = SHA256(data)
-// 6) Check if hash has k leading zero bits
-// 7) If yes: Write ”ACCEPT”, exit 0
-// 8) If no: Write ”REJECT”, exit 1
+// Server program reads the challenge data from Challenge$i.txt which contains the timestamp || server_nonce
+// Then it reads the difficulty from Difficulty$i.txt
+// It writes the challenge to puzzle_challenge.txt as a hex string and the difficulty to puzzle_k.txt as ASCII integer
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,60 +13,41 @@
 
 char* Read_File(const char *filename, int *length);
 void Write_File(char fileName[], char input[], int input_length);
-int Hex_To_Bytes(const char *hex, unsigned char *bytes, int hex_len);
-int Bytes_To_Hex(const unsigned char *bytes, int byte_len, char *hex);
+int Hex_to_Bytes(const char *hex, unsigned char *bytes, int hex_len);
+int Bytes_to_Hex(const unsigned char *bytes, int byte_len, char *hex);
 int Compute_SHA256(const unsigned char *input, int inputlen, unsigned char *hash);
 int Read_Int_From_File(const char *filename);
 // changed to void from int to accomodate new Write_File function
 void Write_Int_To_File(const char *filename, int value);
-void Int_To_Binary(int n, char *binary);
-void Count_Leading_Zeros(unsigned char *hash, int *zeros);
 
 int main(int argc, char *argv[]) {
-    
+
     char *userChallengeFileArg = argv[1];
     char *userDifficultyFileArg = argv[2];
-    char *userNonceFileArg = argv[3];
-
-    // Read challenge as char 
-    int challenge_hex_len;
+    
+    // Read challenge data
+    int challenge_len;
     int difficulty;
-    char *challenge_in_hex = Read_File(userChallengeFileArg, &challenge_hex_len);
+    char *challenge = Read_File(userChallengeFileArg, &challenge_len);
+    // printf("read challenge\n");
 
-    char *challenge_in_bytes = (char *)malloc(challenge_hex_len / 2);
-    int challenge_len = Hex_To_Bytes(challenge_in_hex, (unsigned char *)challenge_in_bytes, challenge_hex_len);
-
-    // Read difficulty as integer
+    // Read the difficulty
     difficulty = Read_Int_From_File(userDifficultyFileArg);
+    // printf("read difficulty\n");
 
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    int nonce_len;
-    char *nonce = malloc(2047);
-    nonce = Read_File(userNonceFileArg, &nonce_len);
+    // Write the challenge to puzzle_challenge.txt as a hex string
+    // printf("convert bytes to hex\n");
+    Write_File("puzzle_challenge.txt", (char *)challenge, challenge_len);
+    // printf("write to puzzle_challenge.txt\n");
 
-    unsigned char data[challenge_len + sizeof(nonce)];
-    memcpy(data, challenge_in_bytes, challenge_len);
-    memcpy(data + challenge_len, &nonce, sizeof(nonce));
+    // Write the difficulty to puzzle_k.txt
+    Write_Int_To_File("puzzle_k.txt", difficulty);
+    // printf("write to puzzle_k.txt\n");
+    
 
-    Compute_SHA256(data, sizeof(data), hash);
-
-    int zeros = 0;
-    Count_Leading_Zeros(hash, &zeros);
-
-    char accept[6] = "ACCEPT";
-    char reject[6] = "REJECT";
-
-    if(zeros == difficulty) {
-        Write_File("verification_result.txt", accept, sizeof(accept));
-        exit(0);
-    }
-    else {
-        Write_File("verification_result.txt", reject, sizeof(reject));
-        exit(1);
-    }
-        
     return 0;
 }  
+
 
 /*
     File I/O Functions
@@ -115,6 +86,20 @@ char* Read_File(const char *filename, int *length) {
     return buffer;
 }
 
+// This function produced a segmentation fault
+//  // Write string to file
+// int Write_File(const char *filename, const char *data) {
+//     FILE *file = fopen(filename, "w");
+//     if (!file) {
+//         fprintf(stderr, "Error: Cannot open file %s for writing\n", filename);
+//         return -1;
+//     }
+    
+//     fprintf(file, "%s", data);
+//     fclose(file);
+//     return 0;
+// }
+
 void Write_File(char fileName[], char input[], int input_length){
   FILE *pFile;
   pFile = fopen(fileName,"w");
@@ -132,7 +117,7 @@ void Write_File(char fileName[], char input[], int input_length){
 */
 
  // Convert hex string to byte array
-int Hex_To_Bytes(const char *hex, unsigned char *bytes, int hex_len) {
+int Hex_to_Bytes(const char *hex, unsigned char *bytes, int hex_len) {
     if (hex_len % 2 != 0) {
         fprintf(stderr, "Error: Hex string length must be even\n");
         return -1;
@@ -152,7 +137,7 @@ int Hex_To_Bytes(const char *hex, unsigned char *bytes, int hex_len) {
 }
 
  // Convert byte array to hex string
-int Bytes_To_Hex(const unsigned char *bytes, int byte_len, char *hex) {
+int Bytes_to_Hex(const unsigned char *bytes, int byte_len, char *hex) {
     for (int i = 0; i < byte_len; i++) {
         sprintf(hex + (i * 2), "%02x", bytes[i]);
     }
@@ -202,45 +187,4 @@ void Print_Hex(const char *label, const unsigned char *data, int len) {
         printf("%02x", data[i]);
     }
     printf("\n");
-}
-
-void Int_To_Binary(int n, char *binary)
-{
-    int binaryReversed[256];
-    int iterator = 255;
-    while (n > 0) {
-        binaryReversed[iterator] = n % 2;
-        n = n / 2;
-        iterator--;
-    }
-    int start_pos = iterator + 1;  // First position we wrote to
-    int length = 256 - start_pos;
-    
-    for(int i = 0; i < length; i++) {
-        binary[i] = binaryReversed[start_pos + i] + '0';
-    }
-    binary[length] = '\0';
-}
-
-void Count_Leading_Zeros(unsigned char *hash, int *zeros) {
-    for(int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        // if entire byte is 0, we don't have to do partial bits
-        if(hash[i] == 0) {
-            *zeros += 8;  
-        } 
-        else {
-            // count leading zeros in this byte
-            unsigned char byte = hash[i];
-            for(int bit = 7; bit >= 0; bit--) {
-                // and the byte with another byte that only contains a 1 in the bit position 
-                // (starts left, moves right with each iteration)
-                // As soon as the result is non-zero we break
-                if(byte & (1 << bit)) 
-                    break;  
-                
-                (*zeros)++;
-            }
-            break;  
-        }
-    }
 }
