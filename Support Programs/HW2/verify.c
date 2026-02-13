@@ -20,6 +20,7 @@
 #include <string.h>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
+#include <math.h>
 
 char* Read_File(const char *filename, int *length);
 void Write_File(char fileName[], char input[], int input_length);
@@ -31,6 +32,8 @@ int Read_Int_From_File(const char *filename);
 void Write_Int_To_File(const char *filename, int value);
 void Int_To_Binary(int n, char *binary);
 void Count_Leading_Zeros(unsigned char *hash, int *zeros);
+void Print_Byte_Binary(unsigned char byte);
+void Print_Hex(const char *label, const unsigned char *data, int len);
 
 int main(int argc, char *argv[]) {
     
@@ -50,31 +53,80 @@ int main(int argc, char *argv[]) {
     difficulty = Read_Int_From_File(userDifficultyFileArg);
 
     unsigned char hash[SHA256_DIGEST_LENGTH];
-    int nonce_len;
-    char *nonce = malloc(2047);
-    nonce = Read_File(userNonceFileArg, &nonce_len);
+    int nonce_hex_len;
+    char *nonce_hex = Read_File(userNonceFileArg, &nonce_hex_len);
 
-    unsigned char data[challenge_len + sizeof(nonce)];
+    // // Debugging different nonce values between programs
+    // const char *label = "Hex";
+    // Print_Hex(label, (const unsigned char*)nonce_hex, nonce_hex_len);
+
+    // Hex to Bytes 
+    unsigned char nonce_bytes[nonce_hex_len / 2];
+    unsigned int nonce_len = Hex_To_Bytes(nonce_hex, nonce_bytes, nonce_hex_len);
+
+    // printf("Difficulty: %d\n", difficulty);
+    // printf("Nonce: ");
+    // for(int i = 0; i < nonce_len; i++) {
+    //     Print_Byte_Binary(nonce_bytes[i]);
+    // }
+    // printf("\n");
+
+    // print challenge_len and nonce_len for debugging
+    // printf("Challenge Len: %d\n", challenge_len);
+    // printf("Nonce Len (%%u): %u\n", nonce_len);
+
+    // // print challenge_in_bytes for debugging
+    // printf("Challenge Bytes: ");
+    // for(int i = 0; i < challenge_len; i++) {
+    //         Print_Byte_Binary(challenge_in_bytes[i]);
+    // }
+    // printf("\n");
+
+    // construct data = challenge || nonce
+    unsigned char data[challenge_len + nonce_len];
     memcpy(data, challenge_in_bytes, challenge_len);
-    memcpy(data + challenge_len, &nonce, sizeof(nonce));
+    memcpy(data + challenge_len, nonce_bytes, nonce_len);
 
-    Compute_SHA256(data, sizeof(data), hash);
+    // printf("Data: ");
+    // for(int i = 0; i < sizeof(data); i++) {
+    //     Print_Byte_Binary(data[i]);
+    // }
+    // printf("\n");
+
+    Compute_SHA256(data, challenge_len + nonce_len, hash);
+
+    printf("Hash: ");
+    for(int i = 0; i < sizeof(hash); i++) {
+        Print_Byte_Binary(hash[i]);
+    }
+    printf("\n");
 
     int zeros = 0;
     Count_Leading_Zeros(hash, &zeros);
 
+    printf("Leading Zeros: %d\n", zeros);
+    printf("Difficulty: %d\n", difficulty);
+
     char accept[6] = "ACCEPT";
     char reject[6] = "REJECT";
 
-    if(zeros == difficulty) {
-        Write_File("verification_result.txt", accept, sizeof(accept));
+    if(zeros >= difficulty) {
+        Write_File("verification_result.txt", accept, strlen(accept));
+        printf("ACCEPT\n");
+        free(challenge_in_hex);
+        free(challenge_in_bytes);
+        free(nonce_hex);
         exit(0);
     }
     else {
-        Write_File("verification_result.txt", reject, sizeof(reject));
+        Write_File("verification_result.txt", reject, strlen(reject));
+        printf("REJECT\n");
+        free(challenge_in_hex);
+        free(challenge_in_bytes);
+        free(nonce_hex);
         exit(1);
     }
-        
+
     return 0;
 }  
 
@@ -112,6 +164,12 @@ char* Read_File(const char *filename, int *length) {
     
     *length = read_size;
     fclose(file);
+
+    // printf("Iteration\n");
+    // for(int i = 0; i < *length; i++) {
+    //     Print_Byte_Binary(buffer[i]);
+    // } 
+    // printf("\n");
     return buffer;
 }
 
@@ -242,5 +300,11 @@ void Count_Leading_Zeros(unsigned char *hash, int *zeros) {
             }
             break;  
         }
+    }
+}
+
+void Print_Byte_Binary(unsigned char byte) {
+    for(int bit = 7; bit >= 0; bit--) {
+        printf("%d", (byte >> bit) & 1);
     }
 }
