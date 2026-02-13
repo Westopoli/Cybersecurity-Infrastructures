@@ -25,6 +25,7 @@
 #include <openssl/sha.h>
 #include <openssl/evp.h>
 
+
 char* Read_File(const char *filename, int *length);
 void Write_File(char fileName[], char input[], int input_length);
 int Hex_To_Bytes(const char *hex, unsigned char *bytes, int hex_len);
@@ -36,6 +37,7 @@ void Write_Int_To_File(const char *filename, int value);
 void Int_To_Binary(int n, char *binary);
 void Count_Leading_Zeros(unsigned char *hash, int *zeros);
 void Print_Byte_Binary(unsigned char byte);
+void Print_Hex(const char *label, const unsigned char *data, int len);
 
 int main(int argc, char *argv[]) {
 
@@ -56,47 +58,98 @@ int main(int argc, char *argv[]) {
     //     printf("%d", challenge_in_bytes[i]);
     // }
     // printf("\n");
-
+    
     // Read difficulty as integer
     difficulty = Read_Int_From_File(userDifficultyFileArg);
     // printf("Difficulty Int: %d\n", difficulty);
 
     // Starting from nonce = 0, increment and check for solution
     unsigned char hash[SHA256_DIGEST_LENGTH];
-    unsigned int nonce = 0;
+    // uint64 type instead of unsigned int (caused issues with memcpy)
+    uint64_t nonce = 0;
     unsigned long long iterations = 0;
-    int found = 1;
-    int zeros = 0;
+    unsigned int nonce_len = sizeof(nonce);
+    // unsigned char data[challenge_len + nonce_len];
+    unsigned char data[challenge_len + 8];
+    unsigned char nonce_bytes[8];
     
-    while (found) {
+    while (1) {
         // construct hash input = challenge || nonce
-        for( ; iterations < 1ULL << (difficulty - 1); iterations++) {
-            printf("Iteration: %llu\n", iterations);
-            unsigned char data[challenge_len + sizeof(nonce)];
+            unsigned char data[challenge_len + 8];
+
+            // printf("\n\n");
+            // printf("Difficulty: %d\n", difficulty);
+            // printf("Nonce: ");
+            // for(int i = 0; i < nonce_len; i++) {
+            //     Print_Byte_Binary(((unsigned char *)&nonce)[i]);
+            // }
+            // printf("\n");
+            // // print challenge_len and nonce_len for debugging
+            // printf("Challenge Len: %d\n", challenge_len);
+            // printf("Nonce Len (%%u): %u\n", nonce_len);
+
+            // // print challenge_in_bytes for debugging
+            // printf("Challenge Bytes: ");
+            // for(int i = 0; i < challenge_len; i++) {
+            //         Print_Byte_Binary(challenge_in_bytes[i]);
+            // }
+            // printf("\n");
+
+            // experienced significant issues with memcpy of nonce, 
+            // so I am manually converting nonce to byte array and then copying to data
+            // unsigned char nonce_bytes[4];
+            // nonce_bytes[0] = (nonce >> 24) & 0xFF;
+            // nonce_bytes[1] = (nonce >> 16) & 0xFF;
+            // nonce_bytes[2] = (nonce >> 8) & 0xFF;
+            // nonce_bytes[3] = nonce & 0xFF;
+
+            // 4 bit to 8 bit for nonce conversion to accomodate uint64 type
+            // big endian
+        // realized the grader is looking for little endian....... facepalm
+            // nonce_bytes[0] = (nonce >> 56) & 0xFF;
+            // nonce_bytes[1] = (nonce >> 48) & 0xFF;
+            // nonce_bytes[2] = (nonce >> 40) & 0xFF;
+            // nonce_bytes[3] = (nonce >> 32) & 0xFF;
+            // nonce_bytes[4] = (nonce >> 24) & 0xFF;
+            // nonce_bytes[5] = (nonce >> 16) & 0xFF;
+            // nonce_bytes[6] = (nonce >> 8) & 0xFF;
+            // nonce_bytes[7] = nonce & 0xFF;
+
+            for (int i = 0; i < 8; i++) {
+                nonce_bytes[i] = (nonce >> (i * 8)) & 0xFF;
+            }
+
+            // construct data = challenge || nonce
             memcpy(data, challenge_in_bytes, challenge_len);
-            memcpy(data + challenge_len, &nonce, sizeof(nonce));
-            // int bits_we_care_about = difficulty % 8;
+            // memcpy(data + challenge_len, nonce_bytes, 4);
+            memcpy(data + challenge_len, nonce_bytes, 8);
+
+            // debugging print 
+            // printf("Data: ");
+            // for(int i = 0; i < sizeof(data); i++) {
+            //     Print_Byte_Binary(data[i]);
+            // }
+            // printf("\n");
 
             // compute SHA256 hash
-            Compute_SHA256(data, sizeof(data), hash);
-            nonce++;
+            Compute_SHA256(data, challenge_len + 8, hash);
 
+            int zeros = 0;
             Count_Leading_Zeros(hash, &zeros);
 
-            // print hash, nonce, and leading zeros
+            // debugging print 
             printf("Hash: ");
             for(int i = 0; i < sizeof(hash); i++) {
                 Print_Byte_Binary(hash[i]);
             }
             printf("\n");
-            printf("Nonce: %d", nonce);
-            printf("Leading Zeros: %d", zeros);
 
-            if(zeros > difficulty) {
-                found = 0;
+            if(zeros >= difficulty) {
                 break;
             }
+            nonce++;
 
+        // included previous, failed attempts
             // for(int i = 0; i < challenge_len; i++) {
             //     // before iterating through this hash, check if we've already found enough zero bits
             //     // if(zero_counter >= difficulty) {
@@ -138,21 +191,37 @@ int main(int argc, char *argv[]) {
 
                 
             // }   
-        }
-        // if(iterations == 2047 && found == 0)
-        //     break;
     }
 
+    
+
+    // printf("Nonce: ");
+    // for(int i = 0; i < sizeof(nonce); i++) {
+    //     Print_Byte_Binary(((unsigned char*)&nonce)[i]);
+    // }
+    // printf("\n");
+
     // Write nonce to solution_nonce.txt as hex string
-    char nonce_as_bytes[sizeof(nonce) * 2 + 1];
-    Int_To_Binary(nonce, nonce_as_bytes);
-    Bytes_To_Hex((unsigned char *)&nonce, sizeof(nonce), nonce_as_bytes);
-    Write_File("solution_nonce.txt", nonce_as_bytes, sizeof(nonce_as_bytes));
+    // char *hex_nonce = malloc(sizeof(nonce) / 2 + 1);
+    // printf("Nonce size: %lu\n", sizeof(hex_nonce));
+    // little endian to big endian conversion (took ages to figure this out lol)
+    // execpt this broke everything
+    // unsigned int nonce_be = htonl(nonce);
+    // Bytes_To_Hex((unsigned char*)&nonce_be, 4, hex_nonce);
+    // Bytes_To_Hex((unsigned char*)&nonce_be, 8, hex_nonce);
+
+    // char *hex_nonce = malloc(16 + 1);   // 16 hex chars
+
+    char *hex_nonce = malloc(16 + 1);  // 16 hex chars + null
+
+    Bytes_To_Hex(nonce_bytes, 8, hex_nonce);
+
+    Write_File("solution_nonce.txt", hex_nonce, 16);
 
     // int testing = 127;
     // char *binary = (char *)malloc(257);
     // Int_To_Binary(testing, binary);
-    // for(int i = 0; i < 256; i++) {
+    // for(int i = 0; i < 256; i++) {   
     //     printf("%c", binary[i]);
     // }
     // printf("\n");
@@ -162,6 +231,8 @@ int main(int argc, char *argv[]) {
 
     free(challenge_in_bytes);
     // free(binary);
+
+    free(hex_nonce);
 
     return 0;
 }
