@@ -19,6 +19,17 @@
 // 5. Write nonce to solution_nonce.txt as Hex string 
 // 6. Write iteration count to solution_iterations.txt as ASCII integer 
 
+// Debugging issues
+    // This program took like 7 hours total lol
+    // First the given Write_File function was producing a segmentation fault
+    // Then I failed at implementing the proper logic for counting leading zeroes multiple times
+    // Then the nonce was always wrong and I couldn't figure out why
+        // Writing big endian -> .sh expected little endian (took forever to figure out, big boi facepalm)
+        // nonce was incremented one more time than needed because of an incorrect interation line location
+    // And finally there were significant sizing issues with literally every variable. I figured out the hard
+    // way that sizeof(pointer) doesn't work, among many many other very depressing sizing mistakes lol. 
+    // I hope it's helpful that I kept all the old versions of the code commented out. 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

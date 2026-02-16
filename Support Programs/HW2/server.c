@@ -5,6 +5,7 @@
 // Then it reads the difficulty from Difficulty$i.txt
 // It writes the challenge to puzzle_challenge.txt as a hex string and the difficulty to puzzle_k.txt as ASCII integer
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

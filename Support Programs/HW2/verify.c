@@ -15,6 +15,17 @@
 // 7) If yes: Write ”ACCEPT”, exit 0
 // 8) If no: Write ”REJECT”, exit 1
 
+// Debugging issues
+    // This program took about 3-4 hours total, most of which was all debugging one issue :')
+    // First my program was reading a different thing than I was writing to the file, which was very confusing. 
+        // turned out to be a type difference, reading as a string but writing as bytes (facepalm)
+    // The nonce being off by one in the client program also threw me off hard, thought it was an issue with 
+    // this program, but in the end it wasn't. 
+    // And finally, the magnum opus of problems, the verification result from the .sh. 
+    // When I would run the program manually, the verificaiton was correct, but when I ran the .sh, it was wrong.
+    // After significant blood/sweat/tears, I realized I wasn't adding a null character to the end of the string............. facepalm x1000000000000000000000.
+        // Literally spent like 2 whole hours tryig to figure that out :')
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -93,34 +104,43 @@ int main(int argc, char *argv[]) {
     // }
     // printf("\n");
 
+    // printf("\n");
+    // printf("Challenge Len: %d\n", challenge_len);
+    // printf("Nonce Hex Len: %d\n", nonce_hex_len);
+    // printf("Nonce Len: %u\n", nonce_len);
+    // printf("\n");
+
     Compute_SHA256(data, challenge_len + nonce_len, hash);
 
-    printf("Hash: ");
-    for(int i = 0; i < sizeof(hash); i++) {
-        Print_Byte_Binary(hash[i]);
-    }
-    printf("\n");
+    // printf("Hash: ");
+    // for(int i = 0; i < sizeof(hash); i++) {
+    //     Print_Byte_Binary(hash[i]);
+    // }
+    // printf("\n");
 
     int zeros = 0;
     Count_Leading_Zeros(hash, &zeros);
 
-    printf("Leading Zeros: %d\n", zeros);
-    printf("Difficulty: %d\n", difficulty);
-
-    char accept[6] = "ACCEPT";
-    char reject[6] = "REJECT";
+    // printf("Leading Zeros: %d\n", zeros);
+    // printf("Difficulty: %d\n", difficulty);
 
     if(zeros >= difficulty) {
-        Write_File("verification_result.txt", accept, strlen(accept));
-        printf("ACCEPT\n");
+        // Write_File("verification_result.txt", accept, strlen(accept));
+        FILE *f = fopen("verification_result.txt", "w");
+        fprintf(f, "ACCEPT\n");
+        fclose(f);
+        // printf("ACCEPT\n");
         free(challenge_in_hex);
         free(challenge_in_bytes);
         free(nonce_hex);
         exit(0);
     }
     else {
-        Write_File("verification_result.txt", reject, strlen(reject));
-        printf("REJECT\n");
+        // Write_File("verification_result.txt", reject, strlen(reject));
+        FILE *f = fopen("verification_result.txt", "w");
+        fprintf(f, "REJECT\n");
+        fclose(f);
+        // printf("REJECT\n");
         free(challenge_in_hex);
         free(challenge_in_bytes);
         free(nonce_hex);
