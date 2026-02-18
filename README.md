@@ -12,6 +12,11 @@
     - Run following command in terminal:
     ```bash VerifyYourSolutionClientPuzzle.sh```
 
+    **Merkle Hash Tree Program**
+    - To run, navigate to VerifySolution folder in terminal
+    - Run following command in terminal:
+    ```bash VerifyYourSolutionMHT.sh```
+
 
 **Support Programs**
   - Side projects built to work towards the larger main projects
@@ -28,4 +33,8 @@ Bob reads the ciphertext from the "Ciphertext.txt" file. The shared seed is read
   **Client Server Puzzle Program**
   
 -- description here -- 
+
+  **Merkle Hash Tree Program**
+    
+  -- description here -- 
 
