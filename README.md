@@ -1,21 +1,19 @@
-**Main Progams** 
-  - Runnable programs, .sh files provided with commands to run them.
-  - If you're going to skim something, skim these. The projects are designed to demonstrate understading of cybersecurity concepts, and involved the most development time.
+**Main Programs**
 
-    **Digital Signature Via Hash Program - Output Feedback Mode**
-    - To run, navigate to VerifySolution folder in terminal
-    - Run following command in terminal:
-      ```bash VerifyingYourSolution1.sh```
+  **Digital Signature Via Hash Program - Output Feedback Mode**
+  - To run, navigate to VerifySolution folder in terminal
+  - Run following command in terminal:
+  ```bash VerifyingYourSolution1.sh```
    
-    **Client Server Puzzle Program**
-    - To run, navigate to VerifySolution folder in terminal
-    - Run following command in terminal:
-    ```bash VerifyYourSolutionClientPuzzle.sh```
+  **Client Server Puzzle Program - DDoS Prevention**
+  - To run, navigate to VerifySolution folder in terminal
+  - Run following command in terminal:
+  ```bash VerifyYourSolutionClientPuzzle.sh```
 
-    **Merkle Hash Tree Program**
-    - To run, navigate to VerifySolution folder in terminal
-    - Run following command in terminal:
-    ```bash VerifyYourSolutionMHT.sh```
+  **Merkle Hash Tree Program**
+  - To run, navigate to VerifySolution folder in terminal
+  - Run following command in terminal:
+  ```bash VerifyYourSolutionMHT.sh```
 
 
 **Support Programs**
@@ -35,6 +33,8 @@ Bob reads the ciphertext from the "Ciphertext.txt" file. The shared seed is read
 -- description here -- 
 
   **Merkle Hash Tree Program**
+
+-- description here -- 
     
   -- description here -- 
 
