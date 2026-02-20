@@ -34,7 +34,7 @@ Bob reads the ciphertext from the "Ciphertext.txt" file. The shared seed is read
 
   **Merkle Hash Tree Program**
 
--- description here -- 
-    
-  -- description here -- 
+The program reads 8 newline-separated 32-byte lines of data from either the "Messages1.txt" or "Messages2.txt" file. It uses SHA256 to hash each line of data to obtain values of the leaves of the Merkle Hash Tree (MHT), then calculates the remaining nodes by concatenating their children's hashes from left to right and hashing the result. The root of the resulting MHT is converted to hex and written to "TheRoot.txt" file. 
+
+The program also reads a user-inputted message index and calculates the verification path for that index. Starting at the message index leaf and going up each level through the parent and ending at the root, the hash value of path node's sibling is converted to hex format and added to the path and separated by a newline character. The verification path is written to "ThePath.txt" file.
 
