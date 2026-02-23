@@ -12,6 +12,7 @@ Description
 // Fully implemented functions
 unsigned char* Read_File (char fileName[], int *fileLen);
 void Write_File(char fileName[], char input[], int input_length);
+int Encrypt_AES(const unsigned char* plaintext, int plaintextlen, const unsigned char* key, const unsigned char* iv, unsigned char* ciphertext);
 unsigned char* PRNG(unsigned char *seed, unsigned long seedlen, unsigned long prnglen);
 int Bytes_to_Hex(const unsigned char *bytes, int byte_len, char *hex);
 
@@ -19,10 +20,12 @@ int Bytes_to_Hex(const unsigned char *bytes, int byte_len, char *hex);
 // Still need implementation
     // Hash SHA256
     // HMAC
-    // AES encrypt
+
 
 int main(int argc, char *argv[]) {
     
+    unsigned char IV[16] = "abcdefghijklmnop";
+
     // Initialize keys var
     // Initialize ciphertexts var
     // Initialize individualHMACs var
@@ -81,6 +84,25 @@ void Write_File(char fileName[], char input[], int input_length){
   //fputs(input, pFile);
   fwrite(input, 1, input_length, pFile);
   fclose(pFile);
+}
+
+int Encrypt_AES(const unsigned char* plaintext, int plaintextlen, const unsigned char* key, const unsigned char* iv, unsigned char* ciphertext){
+    // Allocate memory for cipher context
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+    // Initialize context to perform AES encryption in CTR mode
+    EVP_CipherInit_ex(ctx, EVP_aes_256_ctr(), NULL, key, iv, 1);    // Encrypt = 1
+
+    int ciphertextlen;
+    // Pass output(ciphertext) and input(plaintext), perform encryption
+    EVP_CipherUpdate(ctx, ciphertext, &ciphertextlen, plaintext, plaintextlen);
+
+    // Finalize operation
+    EVP_CipherFinal_ex(ctx, ciphertext, &ciphertextlen);
+    
+    // Free context
+    EVP_CIPHER_CTX_free(ctx);
+    return 0;
 }
 
 unsigned char* PRNG(unsigned char *seed, unsigned long seedlen, unsigned long prnglen)
