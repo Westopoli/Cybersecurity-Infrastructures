@@ -9,7 +9,7 @@ gcc bob.c -lcrypto -o bob
 for i in 1 2
 do
 ./alice Messages$i.txt SharedSeed$i.txt >> alice$i.log
-./bob SharedSeed$i.txt >> bob$i.log
+./bob SharedSeed$i.txt >> bob$i.log &
 
 #=========================================
 if cmp_files "CorrectKeys$i.txt" "Keys.txt"
