@@ -15,7 +15,7 @@ Technical Details: PRNG using Chacha20, SHA256, HMAC-SHA256, and AES-CTR in Open
 executables - ”Alice” (Logging machine) and ”Bob” (Auditor) that communicate through text files. 
 
 Pseudocode
-    Reads shared seed from file 
+    Reads shared seed/messages from file 
     Uses PRNG to create initial symmetric key
     For every message M
         Compute ciphertext C(i) = Encrypt(key(i), M(i))
@@ -34,8 +34,14 @@ Pseudocode
 */
 
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
+
+#define MAX_MESSAGES 100
+#define MAX_MESSAGE_LENGTH 1025
+#define KEY_LENGTH 32
 
 /* Function declarations*/
 unsigned char* Read_File (char fileName[], int *fileLen);
@@ -45,12 +51,59 @@ unsigned char* PRNG(unsigned char *seed, unsigned long seedlen, unsigned long pr
 unsigned char* Hash_SHA256(unsigned char* input, unsigned long inputlen);
 int Bytes_to_Hex(const unsigned char *bytes, int byte_len, char *hex);
 
+// Struct to encapsulate message data
+struct MessageInfo {
+    unsigned char plainText[MAX_MESSAGE_LENGTH];
+    int plainTextLen;
+    unsigned char cipherText[MAX_MESSAGE_LENGTH];
+    int cipherTextLen;
+    unsigned char key[KEY_LENGTH];
+    int keyLen;
+};
+
 int main(int argc, char *argv[]) {
     
     unsigned char IV[16] = "abcdefghijklmnop";
 
-    
+    // if(argc != 2) {
+    //     printf("Incorrect number of arguments.\n");
+    //     return 1;
+    // }
 
+    // Reads shared seed/messages from file
+    unsigned char* messagesAll = malloc(MAX_MESSAGES * MAX_MESSAGE_LENGTH);
+    int len;
+    messagesAll = Read_File(argv[1], &len);
+    int numMessages = len / MAX_MESSAGE_LENGTH;
+
+    // loop through numMessages and seperate them int individual messages by newline character, store them in an array of Messages struct
+    struct MessageInfo messages[MAX_MESSAGES];
+    for (int i = 0; i < numMessages; i++) {
+        unsigned char* singleMessage = malloc(MAX_MESSAGE_LENGTH);
+        memcpy(singleMessage, messagesAll + (i * MAX_MESSAGE_LENGTH), MAX_MESSAGE_LENGTH);
+        printf("Raw message \n %d: %s\n\n", i+1, singleMessage);
+        memcpy(messages[i].plainText, singleMessage, MAX_MESSAGE_LENGTH);
+        printf("Message \n %d: %s\n", i+1, messages[i].plainText);
+        messages[i].plainTextLen = strlen((char*)singleMessage);
+        free(singleMessage);
+        printf("Iteration %d: Message length: %d\n", i+1, messages[i].plainTextLen);
+    }
+
+    for (int i = 0; i < numMessages; i++) {
+        printf("Message %d: %s\n", i+1, messages[i].plainText);
+    }
+
+    
+    
+    
+    // int seed_len;
+    // unsigned char *seed = Read_File(argv[2], &seed_len);
+
+    // Uses PRNG to create initial symmetric key
+
+    
+    free(messagesAll);
+    
     return 0;
 }
 
