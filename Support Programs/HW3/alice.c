@@ -1,57 +1,57 @@
 /*
-Description
+Forward-Secure and Aggregate Digital Forensics Tools
+
+In addition to forward-secure and aggregate MACs, we also introduce a forward-secure symmetric encryp-
+tion. In this way, this tool will offer compromise-resilient encryption, integrity and authentication with compactness
+(i.e., O(1) cryptographic tag size) in the symmetric cryptography setting.
+
+It puts in action AES, SHA256, HMAC, hash-chains and hash functions in an integrated
+manner. A secure and professional (e.g., side-channel resistant and optimization) implementation of the below al-
+gorithm can offer a very high-security for real-life applications. The potential applications include but not limited
+to secure voting, electronic banking system or other critical use-cases, wherein digital forensic investigations must
+be conducted after the interface of active adversaries.
+
+Technical Details: PRNG using Chacha20, SHA256, HMAC-SHA256, and AES-CTR in OpenSSL. The program is run as two separate 
+executables - ”Alice” (Logging machine) and ”Bob” (Auditor) that communicate through text files. 
+
+Pseudocode
+    Reads shared seed from file 
+    Uses PRNG to create initial symmetric key
+    For every message M
+        Compute ciphertext C(i) = Encrypt(key(i), M(i))
+        Individual HMAC: S(i) = HMAC(key(i), M(i))
+        Aggregate HMAC: S(i) = Hash(S(1, i-1) || S(i))
+            For case S(1, 1), the input will be just S(1)
+            S(1, 2) = Hash(S(1, 1) || S(2))
+            S(1, 3) = Hash(S(1, 2) || S(3))
+            ...
+        Update key for every message: key(i+1) = Hash(key(i))
+    Alice Writes in Hex
+        Keys in Keys.txt (multiple lines)
+        Ciphertexts in Ciphertexts.txt (multiple lines)
+        Individual HMACs in IndividualHMACs.txt (multiple lines)
+        Aggregated HMACs in AggregateHMAC.txt
 */
 
 #include <stdio.h>
-
 #include <openssl/sha.h>
 #include <openssl/evp.h>
 
-
 /* Function declarations*/
-// Fully implemented functions
 unsigned char* Read_File (char fileName[], int *fileLen);
 void Write_File(char fileName[], char input[], int input_length);
 int Encrypt_AES(const unsigned char* plaintext, int plaintextlen, const unsigned char* key, const unsigned char* iv, unsigned char* ciphertext);
 unsigned char* PRNG(unsigned char *seed, unsigned long seedlen, unsigned long prnglen);
+unsigned char* Hash_SHA256(unsigned char* input, unsigned long inputlen);
 int Bytes_to_Hex(const unsigned char *bytes, int byte_len, char *hex);
-
-
-// Still need implementation
-    // Hash SHA256
-    // HMAC
-
 
 int main(int argc, char *argv[]) {
     
     unsigned char IV[16] = "abcdefghijklmnop";
 
-    // Initialize keys var
-    // Initialize ciphertexts var
-    // Initialize individualHMACs var
-
-    // Read shared seed argv[2]
-    // Use PRNG on seed, get key
     
-    // Initialize HMAC_curr and HMAC_prev with NULL
-    // Open message file argv[1]
-    // Read first message
-    // Until the end of the file is reached
-        // Concatenate key to keys var
-        // AES encrypt message
-        // Concatenate to cipherexts var
-        // Compute HMAC_curr w/ key and ciphertext
-        // Concatenate to individualHMAC var
-        // Append/concat HMAC_curr to HMAC_prev
-        // Hash the key to get next key
 
-
-    // Convert keys to hex, write to "Keys.txt"
-    // Convert ciphertexts to hex, write to "Ciphertexts.txt"
-    // Convert individualHMACs to hex, write to "IndividualHMAC.txt"
-    // Convert HMAC_curr (HMAC aggregate)to hex, write to "AggregatedHMAC.txt"
-
-
+    return 0;
 }
 
 unsigned char* Read_File (char fileName[], int *fileLen)
@@ -128,6 +128,19 @@ unsigned char* PRNG(unsigned char *seed, unsigned long seedlen, unsigned long pr
     // free cipher context
     EVP_CIPHER_CTX_free(ctx);
     return pseudoRandomNumber;
+}
+
+unsigned char* Hash_SHA256(unsigned char* input, unsigned long inputlen)
+{
+    unsigned char *hash = malloc(SHA256_DIGEST_LENGTH);
+
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
+    EVP_DigestUpdate(ctx, input, inputlen);
+    EVP_DigestFinal_ex(ctx, hash, NULL);
+    EVP_MD_CTX_free(ctx);
+
+    return hash;
 }
 
 int Bytes_to_Hex(const unsigned char *bytes, int byte_len, char *hex) {

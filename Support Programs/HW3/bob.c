@@ -8,6 +8,7 @@
 int Compute_SHA256(const unsigned char *input, int inputlen, unsigned char *hash);
 int Encrypt_AES(const unsigned char* plaintext, int plaintextlen, const unsigned char* key, const unsigned char* iv, unsigned char* ciphertext);
 int Decrypt_AES(const unsigned char* ciphertext, int ciphertextlen, const unsigned char* key, const unsigned char* iv, unsigned char* plaintext);
+unsigned char* Hash_SHA256(unsigned char* input, unsigned long inputlen);
 int Bytes_to_Hex(const unsigned char *bytes, int byte_len, char *hex);
 int Hex_to_Bytes(const char *hex, unsigned char *bytes, int hex_len);
 void Print_Byte_Binary(unsigned char byte);
@@ -123,6 +124,19 @@ int Compute_SHA256(const unsigned char *input, int inputlen, unsigned char *hash
     EVP_MD_CTX_free(ctx);
 
     return 0;
+}
+
+unsigned char* Hash_SHA256(unsigned char* input, unsigned long inputlen)
+{
+    unsigned char *hash = malloc(SHA256_DIGEST_LENGTH);
+
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
+    EVP_DigestUpdate(ctx, input, inputlen);
+    EVP_DigestFinal_ex(ctx, hash, NULL);
+    EVP_MD_CTX_free(ctx);
+
+    return hash;
 }
 
 int Bytes_to_Hex(const unsigned char *bytes, int byte_len, char *hex) {
