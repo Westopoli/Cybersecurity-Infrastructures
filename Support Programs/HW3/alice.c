@@ -52,6 +52,7 @@ int Encrypt_AES(const unsigned char* plaintext, int plaintextlen, const unsigned
 unsigned char* PRNG(unsigned char *seed, unsigned long seedlen, unsigned long prnglen);
 unsigned char* Hash_SHA256(unsigned char* input, unsigned long inputlen);
 int Bytes_to_Hex(const unsigned char *bytes, int byte_len, char *hex);
+int Compute_HMAC(const unsigned char* data, const int datalen, const unsigned char* key, const int keylen, unsigned char* HMAC, const int HMAC_size);
 
 // Struct to encapsulate message data
 struct MessageInfo {
@@ -61,6 +62,8 @@ struct MessageInfo {
     int cipherTextLen;
     unsigned char key[KEY_LENGTH];
     int keyLen;
+    unsigned char hmac[KEY_LENGTH];
+    int hmacLen;
 };
 
 int main(int argc, char *argv[]) {
@@ -141,35 +144,118 @@ int main(int argc, char *argv[]) {
         printf("Memory allocation for key failed.");
         return 0;
     }
-    char *convertedKey = malloc(MAX_MESSAGE_LENGTH * 2); 
-    if (!convertedKey) {
-        printf("Memory allocation for converted key failed.");
-        return 0;
-    }
-
-    key = PRNG(seed, seedSize, MAX_MESSAGE_LENGTH);
+    
+    // generate key using PRNG with seed
+    key = PRNG(seed, seedSize, KEY_LENGTH);
+    messages[0].keyLen = KEY_LENGTH;
+    memcpy(messages[0].key, key, KEY_LENGTH);
 
     // For every message M
     //     Compute ciphertext C(i) = Encrypt(key(i), M(i))
+    // currentMessasge becomes the total number of messages (at the end of the loop above)
     for (int i = 0; i < currentMessage; i++) {
         Encrypt_AES(messages[i].plainText, messages[i].plainTextLen, key, IV, messages[i].cipherText);
         // printf("Message %d encrypted.\n", i+1);
         // Individual HMAC: S(i) = HMAC(key(i), M(i))
-            
+        Compute_HMAC(messages[i].plainText, messages[i].plainTextLen, key, KEY_LENGTH, messages[i].hmac, KEY_LENGTH);
         // Aggregate HMAC: S(i) = Hash(S(1, i-1) || S(i))
-            
+        if (i == 0) {
+            // For case S(1, 1), the input will be just S(1)
+            unsigned char *hashInput = malloc(KEY_LENGTH);
+            // S(1) = HMAC(key(1), M(1))
+            memcpy(hashInput, messages[i].key, KEY_LENGTH);
+
+            // S(1, 1) = Hash(S(1)) = Hash(HMAC(key(1), M(1)))
+            unsigned char *hashOutput = Hash_SHA256(hashInput, KEY_LENGTH);
+            memcpy(messages[i].hmac, hashOutput, KEY_LENGTH);
+
+            // Next key
+            hashOutput = Hash_SHA256(messages[i].key, KEY_LENGTH);
+            memcpy(messages[i+1].key, hashOutput, KEY_LENGTH);
+            free(hashInput);
+            free(hashOutput);
+        }
+        else {
+            // For case S(1, i), the input will be S(1, i-1) || S(i)
+            unsigned char *hashInput = malloc(KEY_LENGTH);
+
+            // Copy last key to hash input
+            memcpy(hashInput, messages[i-1].key, KEY_LENGTH);
+
+            // Copy current key into hash input
+            memcpy(hashInput + KEY_LENGTH, messages[i].key, KEY_LENGTH);
+
+            // S(1, i) = Hash(S(1, i-1) || S(i))
+            unsigned char *hashOutput = Hash_SHA256(hashInput, 2*KEY_LENGTH);
+            memcpy(messages[i].hmac, hashOutput, KEY_LENGTH);
+
+            // Next key
+            hashOutput = Hash_SHA256(messages[i].key, KEY_LENGTH);
+            memcpy(messages[i+1].key, hashOutput, KEY_LENGTH);
+            free(hashInput);
+            free(hashOutput);
+        }
         // Update key for every message: key(i+1) = Hash(key(i))
     }
 
-
-
-
-
+// Alice Writes in Hex
+    // Keys in Keys.txt (multiple lines)
+    char keysHex[currentMessage][KEY_LENGTH*2];
+    for (int i = 0; i < currentMessage; i++) {
+        Bytes_to_Hex(messages[i].key, messages[i].keyLen, keysHex[i]);
+    }
+    char keysHexAll[currentMessage * KEY_LENGTH * 2];
+    for (int i = 0; i < currentMessage; i++) {
+        memcpy(keysHexAll + (i * KEY_LENGTH * 2), keysHex[i], KEY_LENGTH * 2);
+        keysHexAll[(i+1) * KEY_LENGTH * 2 - 1] = '\n';
+    }
+    Write_File("Keys.txt", keysHexAll, currentMessage * KEY_LENGTH * 2);
+    // Ciphertexts in Ciphertexts.txt (multiple lines)
+    char ciphertextsHex[currentMessage][KEY_LENGTH*2];
+    for (int i = 0; i < currentMessage; i++) {
+        Bytes_to_Hex(messages[i].cipherText, messages[i].cipherTextLen, ciphertextsHex[i]);
+    }
+    char ciphertextsHexAll[currentMessage * KEY_LENGTH * 2];
+    for (int i = 0; i < currentMessage; i++) {
+        memcpy(ciphertextsHexAll + (i * KEY_LENGTH * 2), ciphertextsHex[i], KEY_LENGTH * 2);
+        ciphertextsHexAll[(i+1) * KEY_LENGTH * 2 - 1] = '\n';
+    }
+    Write_File("Ciphertexts.txt", ciphertextsHexAll, currentMessage * KEY_LENGTH * 2);
+    // Individual HMACs in IndividualHMACs.txt (multiple lines)
+    char individualHMACsHex[currentMessage][KEY_LENGTH*2];
+    for (int i = 0; i < currentMessage; i++) {
+        Bytes_to_Hex(messages[i].hmac, KEY_LENGTH, individualHMACsHex[i]);
+    }
+    char individualHMACsHexAll[currentMessage * KEY_LENGTH * 2];
+    for (int i = 0; i < currentMessage; i++) {
+        memcpy(individualHMACsHexAll + (i * KEY_LENGTH * 2), individualHMACsHex[i], KEY_LENGTH * 2);
+        individualHMACsHexAll[(i+1) * KEY_LENGTH * 2 - 1] = '\n';
+    }
+    Write_File("IndividualHMACs.txt", individualHMACsHexAll, currentMessage * KEY_LENGTH * 2);
+    // Aggregated HMAC in AggregateHMAC.txt
+    Write_File("AggregateHMAC.txt", individualHMACsHex[currentMessage-1], KEY_LENGTH * 2);
 
     free(key);
-    free(convertedKey);
     free(messagesAll);
     
+    return 0;
+}
+
+int Compute_HMAC(const unsigned char* data, const int datalen, const unsigned char* key, const int keylen, unsigned char* HMAC, const int HMAC_size){
+    OSSL_PARAM params[2];
+    params[0] = OSSL_PARAM_construct_utf8_string("digest", "SHA256", 0);
+    params[1] = OSSL_PARAM_construct_end();
+    EVP_MAC* mac = EVP_MAC_fetch(NULL, "HMAC", NULL);
+    
+    EVP_MAC_CTX *ctx = EVP_MAC_CTX_new(mac);    
+    EVP_MAC_init(ctx, key, keylen, params);
+    EVP_MAC_update(ctx, data, datalen);
+    size_t HMAC_len;
+    EVP_MAC_final(ctx, HMAC, &HMAC_len, HMAC_size);
+
+    EVP_MAC_free(mac);
+    EVP_MAC_CTX_free(ctx);
+
     return 0;
 }
 

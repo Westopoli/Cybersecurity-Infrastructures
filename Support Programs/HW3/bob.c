@@ -55,17 +55,6 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-// Still needs implementation
-// int HMAC(){
-//     EVP_MAC_CTX *ctx = EVP_MAC_CTX_new();
-//     EVP_MAC_init();
-//     EVP_MAC_Update();
-//     EVP_MAC_Final();
-//     EVP_MD_MAC_free(ctx);
-
-//     return 0;
-// }
-
 int Encrypt_AES(const unsigned char* plaintext, int plaintextlen, const unsigned char* key, const unsigned char* iv, unsigned char* ciphertext){
     // Allocate memory for cipher context
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
