@@ -76,6 +76,7 @@ int main(int argc, char *argv[]) {
     messagesAll = Read_File(argv[1], &len);
     int numMessages = len / MAX_MESSAGE_LENGTH;
 
+// Initial loop implementation, didn't work correctly
     // // loop through numMessages and seperate them int individual messages by newline character, store them in an array of Messages struct
     // struct MessageInfo messages[MAX_MESSAGES];
     // for (int i = 0; i < numMessages; i++) {
@@ -94,44 +95,37 @@ int main(int argc, char *argv[]) {
     int i = 0;
     int currentMessage = 0;
 
+    // Loop through each individual message till newline character reached, store information about location, copy message to struct
     while (i < len && currentMessage < MAX_MESSAGES) {
-        printf("cur mess: %d < max mess: %d\n", currentMessage, MAX_MESSAGES);
-        printf("cur pos: %d < len: %d\n", i, len);
+        // printf("cur mess: %d < max mess: %d\n", currentMessage, MAX_MESSAGES);
+        // printf("cur pos: %d < len: %d\n", i, len);
         // Find the next newline
         int messageLen = 0;
         while (messagesAll[i] != '\n') {
             messageLen++;
             i++;
+            // If end of file, break
             if (i >= len) {
-                break; // End of file
+                break; 
             }
         }
-        printf("messageLen: %d\n", messageLen);
+        // printf("messageLen: %d\n", messageLen);
         
-        // Copy the message (without the newline)
-
+        // Copy the message by calculating the offset from start
+        // currentPos is the start of the message, i is the end
         currentPos = i - messageLen;
         memcpy(messages[currentMessage].plainText, messagesAll + currentPos, messageLen);
-        printf("Message copied: %s\n", messages[currentMessage].plainText);
-        printf("Message number: %d\n", currentMessage);
+        // printf("Message copied: %s\n", messages[currentMessage].plainText);
+        // printf("Message number: %d\n", currentMessage);
         messages[currentMessage].plainTextLen = messageLen;
         
-        messageLen++;
+        // Message has been copied, i moves past newline, currentMessage increments
         i++; 
         currentMessage++;
     }
 
-    // for (int i = 0; i < numMessages; i++) {
-    //     printf("Message %d: %s\n\n", i+1, messages[i].plainText);
-    // }
-
-    
-    
-    
-    // int seed_len;
-    // unsigned char *seed = Read_File(argv[2], &seed_len);
-
     // Uses PRNG to create initial symmetric key
+    // NEXT STEP ---------
 
     
     free(messagesAll);
