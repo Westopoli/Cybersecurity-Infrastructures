@@ -31,6 +31,8 @@ Pseudocode
         Ciphertexts in Ciphertexts.txt (multiple lines)
         Individual HMACs in IndividualHMACs.txt (multiple lines)
         Aggregated HMACs in AggregateHMAC.txt
+
+Apologies in advance for the mixing of camel case and snake case lol
 */
 
 #include <stdio.h>
@@ -65,16 +67,21 @@ int main(int argc, char *argv[]) {
     
     unsigned char IV[16] = "abcdefghijklmnop";
 
-    // if(argc != 2) {
-    //     printf("Incorrect number of arguments.\n");
-    //     return 1;
-    // }
+    if(argc != 2) {
+        printf("Incorrect number of arguments.\n");
+        return 1;
+    }
 
     // Reads shared seed/messages from file
     unsigned char* messagesAll = malloc(MAX_MESSAGES * MAX_MESSAGE_LENGTH);
     int len;
     messagesAll = Read_File(argv[1], &len);
     int numMessages = len / MAX_MESSAGE_LENGTH;
+
+    char *userSeedFileArg = argv[2];
+    int seedSize;
+
+    unsigned char* seed = Read_File(userSeedFileArg, &seedSize);
 
 // Initial loop implementation, didn't work correctly
     // // loop through numMessages and seperate them int individual messages by newline character, store them in an array of Messages struct
@@ -95,7 +102,8 @@ int main(int argc, char *argv[]) {
     int i = 0;
     int currentMessage = 0;
 
-    // Loop through each individual message till newline character reached, store information about location, copy message to struct
+    // Loop through each individual message till newline character reached, store information about location, copy message to struct, increment
+    // This could be a function, but for our purposes we only do this once, so it's fine to have it in main
     while (i < len && currentMessage < MAX_MESSAGES) {
         // printf("cur mess: %d < max mess: %d\n", currentMessage, MAX_MESSAGES);
         // printf("cur pos: %d < len: %d\n", i, len);
@@ -124,10 +132,42 @@ int main(int argc, char *argv[]) {
         currentMessage++;
     }
 
-    // Uses PRNG to create initial symmetric key
+    // Uses PRNG to create initial symmetric key using shared seed
     // NEXT STEP ---------
 
-    
+    // allocate memory for key
+    unsigned char *key = malloc(MAX_MESSAGE_LENGTH);
+    if (!key) {
+        printf("Memory allocation for key failed.");
+        return 0;
+    }
+    char *convertedKey = malloc(MAX_MESSAGE_LENGTH * 2); 
+    if (!convertedKey) {
+        printf("Memory allocation for converted key failed.");
+        return 0;
+    }
+
+    key = PRNG(seed, seedSize, MAX_MESSAGE_LENGTH);
+
+    // For every message M
+    //     Compute ciphertext C(i) = Encrypt(key(i), M(i))
+    for (int i = 0; i < currentMessage; i++) {
+        Encrypt_AES(messages[i].plainText, messages[i].plainTextLen, key, IV, messages[i].cipherText);
+        // printf("Message %d encrypted.\n", i+1);
+        // Individual HMAC: S(i) = HMAC(key(i), M(i))
+            
+        // Aggregate HMAC: S(i) = Hash(S(1, i-1) || S(i))
+            
+        // Update key for every message: key(i+1) = Hash(key(i))
+    }
+
+
+
+
+
+
+    free(key);
+    free(convertedKey);
     free(messagesAll);
     
     return 0;
