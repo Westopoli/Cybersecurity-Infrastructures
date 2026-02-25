@@ -64,6 +64,8 @@ struct MessageInfo {
     int keyLen;
     unsigned char hmac[KEY_LENGTH];
     int hmacLen;
+    unsigned char aggregateHmac[KEY_LENGTH];
+    int aggregateHmacLen;
 };
 
 int main(int argc, char *argv[]) {
@@ -150,52 +152,42 @@ int main(int argc, char *argv[]) {
     messages[0].keyLen = KEY_LENGTH;
     memcpy(messages[0].key, key, KEY_LENGTH);
 
-    // For every message M
-    //     Compute ciphertext C(i) = Encrypt(key(i), M(i))
     // currentMessasge becomes the total number of messages (at the end of the loop above)
+    // For every message M
+    //      Compute ciphertext C(i) = Encrypt(key(i), M(i))
     for (int i = 0; i < currentMessage; i++) {
         Encrypt_AES(messages[i].plainText, messages[i].plainTextLen, key, IV, messages[i].cipherText);
         // printf("Message %d encrypted.\n", i+1);
-        // Individual HMAC: S(i) = HMAC(key(i), M(i))
-        Compute_HMAC(messages[i].plainText, messages[i].plainTextLen, key, KEY_LENGTH, messages[i].hmac, KEY_LENGTH);
+        // Individual HMAC: S(i) = HMAC(key(i), E(i))
+        Compute_HMAC(messages[i].cipherText, messages[i].plainTextLen, key, KEY_LENGTH, messages[i].hmac, KEY_LENGTH);
         // Aggregate HMAC: S(i) = Hash(S(1, i-1) || S(i))
         if (i == 0) {
-            // For case S(1, 1), the input will be just S(1)
-            unsigned char *hashInput = malloc(KEY_LENGTH);
-            // S(1) = HMAC(key(1), M(1))
-            memcpy(hashInput, messages[i].key, KEY_LENGTH);
+            // first hmac is just a hash of the first message's hmac
+            unsigned char *hashOutput = Hash_SHA256(messages[i].hmac, KEY_LENGTH);
+            memcpy(messages[i].aggregateHmac, hashOutput, KEY_LENGTH);
+            messages[i].aggregateHmacLen = KEY_LENGTH;
 
-            // S(1, 1) = Hash(S(1)) = Hash(HMAC(key(1), M(1)))
-            unsigned char *hashOutput = Hash_SHA256(hashInput, KEY_LENGTH);
-            memcpy(messages[i].hmac, hashOutput, KEY_LENGTH);
-
-            // Next key
-            hashOutput = Hash_SHA256(messages[i].key, KEY_LENGTH);
-            memcpy(messages[i+1].key, hashOutput, KEY_LENGTH);
-            free(hashInput);
             free(hashOutput);
         }
         else {
-            // For case S(1, i), the input will be S(1, i-1) || S(i)
-            unsigned char *hashInput = malloc(KEY_LENGTH);
+            unsigned char *hashInput = malloc(KEY_LENGTH * 2);
 
-            // Copy last key to hash input
-            memcpy(hashInput, messages[i-1].key, KEY_LENGTH);
+            // concat last hmac with current hmac
+            memcpy(hashInput, messages[i-1].aggregateHmac, KEY_LENGTH);
+            memcpy(hashInput + KEY_LENGTH, messages[i].hmac, KEY_LENGTH);
 
-            // Copy current key into hash input
-            memcpy(hashInput + KEY_LENGTH, messages[i].key, KEY_LENGTH);
+            // hash it and store it in aggregateHmac
+            unsigned char *hashOutput = Hash_SHA256(hashInput, KEY_LENGTH * 2);
+            memcpy(messages[i].aggregateHmac, hashOutput, KEY_LENGTH);
+            messages[i].aggregateHmacLen = KEY_LENGTH;
 
-            // S(1, i) = Hash(S(1, i-1) || S(i))
-            unsigned char *hashOutput = Hash_SHA256(hashInput, 2*KEY_LENGTH);
-            memcpy(messages[i].hmac, hashOutput, KEY_LENGTH);
-
-            // Next key
-            hashOutput = Hash_SHA256(messages[i].key, KEY_LENGTH);
-            memcpy(messages[i+1].key, hashOutput, KEY_LENGTH);
             free(hashInput);
             free(hashOutput);
         }
         // Update key for every message: key(i+1) = Hash(key(i))
+        unsigned char *newKey = malloc(KEY_LENGTH);
+        *newKey = Hash_SHA256(key, KEY_LENGTH);
+        memcpy(key, newKey, KEY_LENGTH);
     }
 
 // Alice Writes in Hex
