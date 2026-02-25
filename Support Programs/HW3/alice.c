@@ -76,22 +76,54 @@ int main(int argc, char *argv[]) {
     messagesAll = Read_File(argv[1], &len);
     int numMessages = len / MAX_MESSAGE_LENGTH;
 
-    // loop through numMessages and seperate them int individual messages by newline character, store them in an array of Messages struct
+    // // loop through numMessages and seperate them int individual messages by newline character, store them in an array of Messages struct
+    // struct MessageInfo messages[MAX_MESSAGES];
+    // for (int i = 0; i < numMessages; i++) {
+    //     unsigned char* singleMessage = malloc(MAX_MESSAGE_LENGTH);
+    //     memcpy(singleMessage, messagesAll + (i * MAX_MESSAGE_LENGTH), MAX_MESSAGE_LENGTH);
+    //     // printf("Raw message \n %d: %s\n\n", i+1, singleMessage);
+    //     memcpy(messages[i].plainText, singleMessage, MAX_MESSAGE_LENGTH);
+    //     // printf("Message \n %d: %s\n", i+1, messages[i].plainText);
+    //     messages[i].plainTextLen = strlen((char*)singleMessage);
+    //     free(singleMessage);
+    //     // printf("Iteration %d: Message length: %d\n", i+1, messages[i].plainTextLen);
+    // }
+
     struct MessageInfo messages[MAX_MESSAGES];
-    for (int i = 0; i < numMessages; i++) {
-        unsigned char* singleMessage = malloc(MAX_MESSAGE_LENGTH);
-        memcpy(singleMessage, messagesAll + (i * MAX_MESSAGE_LENGTH), MAX_MESSAGE_LENGTH);
-        printf("Raw message \n %d: %s\n\n", i+1, singleMessage);
-        memcpy(messages[i].plainText, singleMessage, MAX_MESSAGE_LENGTH);
-        printf("Message \n %d: %s\n", i+1, messages[i].plainText);
-        messages[i].plainTextLen = strlen((char*)singleMessage);
-        free(singleMessage);
-        printf("Iteration %d: Message length: %d\n", i+1, messages[i].plainTextLen);
+    int currentPos = 0;
+    int i = 0;
+    int currentMessage = 0;
+
+    while (i < len && currentMessage < MAX_MESSAGES) {
+        printf("cur mess: %d < max mess: %d\n", currentMessage, MAX_MESSAGES);
+        printf("cur pos: %d < len: %d\n", i, len);
+        // Find the next newline
+        int messageLen = 0;
+        while (messagesAll[i] != '\n') {
+            messageLen++;
+            i++;
+            if (i >= len) {
+                break; // End of file
+            }
+        }
+        printf("messageLen: %d\n", messageLen);
+        
+        // Copy the message (without the newline)
+
+        currentPos = i - messageLen;
+        memcpy(messages[currentMessage].plainText, messagesAll + currentPos, messageLen);
+        printf("Message copied: %s\n", messages[currentMessage].plainText);
+        printf("Message number: %d\n", currentMessage);
+        messages[currentMessage].plainTextLen = messageLen;
+        
+        messageLen++;
+        i++; 
+        currentMessage++;
     }
 
-    for (int i = 0; i < numMessages; i++) {
-        printf("Message %d: %s\n", i+1, messages[i].plainText);
-    }
+    // for (int i = 0; i < numMessages; i++) {
+    //     printf("Message %d: %s\n\n", i+1, messages[i].plainText);
+    // }
 
     
     
@@ -120,7 +152,8 @@ unsigned char* Read_File (char fileName[], int *fileLen)
     int temp_size = ftell(pFile)+1;
     fseek(pFile, 0L, SEEK_SET);
     unsigned char *output = (unsigned char*) malloc(temp_size);
-	fgets(output, temp_size, pFile);
+	// fgets(output, temp_size, pFile); // only read first message
+    fread(output, 1, temp_size-1, pFile);
 	fclose(pFile);
 
     *fileLen = temp_size-1;
