@@ -44,6 +44,7 @@ Apologies in advance for the mixing of camel case and snake case lol
 #define MAX_MESSAGES 100
 #define MAX_MESSAGE_LENGTH 1024
 #define KEY_LENGTH 32
+#define HEX_LENGTH (KEY_LENGTH * 2)
 
 /* Function declarations*/
 unsigned char* Read_File (char fileName[], int *fileLen);
@@ -210,14 +211,14 @@ int main(int argc, char *argv[]) {
             free(hashOutput);
         }
         else {
-            unsigned char *hashInput = malloc(KEY_LENGTH * 2);
+            unsigned char *hashInput = malloc(HEX_LENGTH);
 
             // concat last hmac with current hmac
             memcpy(hashInput, messages[i-1].aggregateHmac, KEY_LENGTH);
             memcpy(hashInput + KEY_LENGTH, messages[i].hmac, KEY_LENGTH);
 
             // hash it and store it in aggregateHmac
-            unsigned char *hashOutput = Hash_SHA256(hashInput, KEY_LENGTH * 2);
+            unsigned char *hashOutput = Hash_SHA256(hashInput, HEX_LENGTH);
             memcpy(messages[i].aggregateHmac, hashOutput, KEY_LENGTH);
             messages[i].aggregateHmacLen = KEY_LENGTH;
 
@@ -246,18 +247,18 @@ int main(int argc, char *argv[]) {
 
 // Alice Writes in Hex
     // Keys in Keys.txt (multiple lines)
-    char keysHex[currentMessage * KEY_LENGTH * 2];
+    char keysHex[currentMessage * HEX_LENGTH];
     int ciphertextHexLen;
     for(int i =0; i < currentMessage; i++) {
-        char temp[KEY_LENGTH * 2];
+        char temp[HEX_LENGTH];
         Bytes_to_Hex(messages[i].key, KEY_LENGTH, temp);
-        memcpy(keysHex + (i * KEY_LENGTH * 2), temp, KEY_LENGTH * 2);
-        keysHex[(i+1) * KEY_LENGTH * 2 - 1] = '\n';
+        memcpy(keysHex + (i * HEX_LENGTH), temp, HEX_LENGTH);
+        keysHex[(i+1) * HEX_LENGTH - 1] = '\n';
         // printf("Key for message %d: %s\n", i+1, temp);
     }
     
     // printf("Keys Hex all: %s\n", keysHex);
-    Write_File("Keys.txt", keysHex, currentMessage * KEY_LENGTH * 2);
+    Write_File("Keys.txt", keysHex, currentMessage * HEX_LENGTH);
     // Ciphertexts in Ciphertexts.txt (multiple lines)
     // old implementation, caused issues 
     // char ciphertextsHex[currentMessage * MAX_MESSAGE_LENGTH * 2];
@@ -313,22 +314,21 @@ int main(int argc, char *argv[]) {
     fclose(pFile);
 
     // Individual HMACs in IndividualHMACs.txt (multiple lines)
-    char individualHMACsHex[currentMessage * KEY_LENGTH * 2];
-    int individualHMACsHexLen;
-    for(int i =0; i < currentMessage; i++) {
-        char temp[KEY_LENGTH * 2];
+    char individualHMACsHex[currentMessage * (HEX_LENGTH + 1)];
+    int location = 0;
+    for(int i = 0; i < currentMessage; i++) {
+        char temp[HEX_LENGTH + 1];
         Bytes_to_Hex(messages[i].hmac, KEY_LENGTH, temp);
-        memcpy(individualHMACsHex + (i * KEY_LENGTH * 2), temp, KEY_LENGTH * 2);
-        individualHMACsHex[(i+1) * KEY_LENGTH * 2 - 1] = '\n';
+        memcpy(individualHMACsHex + (i * (HEX_LENGTH + 1)), temp, HEX_LENGTH);
+        location += HEX_LENGTH;
+        individualHMACsHex[location++] = '\n';
         printf("%s\n", temp);
     }
     printf("\n");
-    for(int i = 0; i < currentMessage; i++) {
-        for (int j = 0; j < KEY_LENGTH * 2; j++) {
-            printf("%c", individualHMACsHex[i * KEY_LENGTH * 2 + j]);
-        }
+    for(int i = 0; i < location; i++) {
+        printf("%c", individualHMACsHex[i]);
     }
-    Write_File("IndividualHMACs.txt", individualHMACsHex, currentMessage * KEY_LENGTH * 2);
+    Write_File("IndividualHMACs.txt", individualHMACsHex, location);
     // Aggregated HMAC in AggregateHMAC.txt
     // printf("Final Aggregate HMAC: ");
     // for (int j = 0; j < KEY_LENGTH; j++) {
@@ -336,9 +336,9 @@ int main(int argc, char *argv[]) {
     // }
     // printf("\n");
     // forgot to convert to hex lol
-    char aggregateHex[KEY_LENGTH * 2 + 1];
+    char aggregateHex[HEX_LENGTH + 1];
     Bytes_to_Hex(messages[currentMessage-1].aggregateHmac, KEY_LENGTH, aggregateHex);
-    Write_File("AggregatedHMAC.txt", aggregateHex, KEY_LENGTH * 2);
+    Write_File("AggregatedHMAC.txt", aggregateHex, HEX_LENGTH);
 
     free(key);
     free(messagesAll);
