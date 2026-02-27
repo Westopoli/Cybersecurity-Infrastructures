@@ -42,7 +42,7 @@ Apologies in advance for the mixing of camel case and snake case lol
 #include <openssl/evp.h>
 
 #define MAX_MESSAGES 100
-#define MAX_MESSAGE_LENGTH 1025 * 4
+#define MAX_MESSAGE_LENGTH 1024
 #define KEY_LENGTH 32
 
 /* Function declarations*/
@@ -71,6 +71,7 @@ struct MessageInfo {
 int main(int argc, char *argv[]) {
     
     unsigned char IV[16] = "abcdefghijklmnop";
+
 
     if(argc != 3) {
         printf("Incorrect number of arguments.\n");
@@ -131,6 +132,20 @@ int main(int argc, char *argv[]) {
         // printf("Message copied: %s\n", messages[currentMessage].plainText);
         // printf("Message number: %d\n", currentMessage);
         messages[currentMessage].plainTextLen = messageLen;
+        messages[currentMessage].cipherTextLen = messageLen;
+
+        // used this to figure out that a trailing delimiter byte that was being included in the plaintext and causing a very minor
+        // error in encryption
+        // printf("Message %d: len=%d, last 3 bytes: %02x %02x %02x\n", 
+        // currentMessage, messages[currentMessage].plainTextLen,
+        // messages[currentMessage].plainText[messages[currentMessage].plainTextLen-3],
+        // messages[currentMessage].plainText[messages[currentMessage].plainTextLen-2],
+        // messages[currentMessage].plainText[messages[currentMessage].plainTextLen-1]);
+
+        while (messages[currentMessage].plainTextLen > 0 && 
+        messages[currentMessage].plainText[messages[currentMessage].plainTextLen - 1] == 0x01) {
+            messages[currentMessage].plainTextLen--;
+}
         
         // Message has been copied, i moves past newline, currentMessage increments
         i++; 
@@ -159,13 +174,17 @@ int main(int argc, char *argv[]) {
     // currentMessasge becomes the total number of messages (at the end of the loop above)
     // For every message M
     //      Compute ciphertext C(i) = Encrypt(key(i), M(i))
+
+    
     for (int i = 0; i < currentMessage; i++) {
+        // printf("Message %d plaintext length: %d\n", i, messages[i].plainTextLen);
         Encrypt_AES(messages[i].plainText, messages[i].plainTextLen, key, IV, messages[i].cipherText);
-        printf("Message %d Ciphertext: ", i+1);
-        for (int j = 0; j < messages[i].plainTextLen; j++) {
-            printf("%02x", messages[i].cipherText[j]);
-        }
-        printf("\n\n\n");
+        // printf("Ciphertext length for message: %d\n", messages[i].plainTextLen);  // Debug
+        // printf("Message %d Ciphertext: ", i);
+        // for (int j = 0; j < messages[i].plainTextLen; j++) {
+        //     printf("%02x", messages[i].cipherText[j]);
+        // }
+        // printf("\n\n\n");
         // Individual HMAC: S(i) = HMAC(key(i), E(i))
         Compute_HMAC(messages[i].cipherText, messages[i].plainTextLen, key, KEY_LENGTH, messages[i].hmac, KEY_LENGTH);
         // Aggregate HMAC: S(i) = Hash(S(1, i-1) || S(i))
@@ -181,11 +200,11 @@ int main(int argc, char *argv[]) {
             messages[i].aggregateHmacLen = KEY_LENGTH;
 
             // fisrt hmac
-            // printf("Message %d HMAC: ", i+1);
-            // for (int j = 0; j < KEY_LENGTH; j++) {
-            //     printf("%02x", messages[i].hmac[j]);
-            // }
-            // printf("\n");
+            printf("Message %d HMAC: ", i+1);
+            for (int j = 0; j < KEY_LENGTH; j++) {
+                printf("%02x", messages[i].hmac[j]);
+            }
+            printf("\n");
 
             free(hashOutput);
         }
@@ -201,11 +220,11 @@ int main(int argc, char *argv[]) {
             memcpy(messages[i].aggregateHmac, hashOutput, KEY_LENGTH);
             messages[i].aggregateHmacLen = KEY_LENGTH;
 
-            // printf("Message %d HMAC: ", i+1);
-            // for (int j = 0; j < KEY_LENGTH; j++) {
-            //     printf("%02x", messages[i].hmac[j]);
-            // }
-            // printf("\n");
+            printf("Message %d HMAC: ", i+1);
+            for (int j = 0; j < KEY_LENGTH; j++) {
+                printf("%02x", messages[i].hmac[j]);
+            }
+            printf("\n");
             
             // printf("Aggregate HMAC after message %d: ", i+1);
             // for (int j = 0; j < KEY_LENGTH; j++) {
