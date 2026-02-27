@@ -42,7 +42,7 @@ Apologies in advance for the mixing of camel case and snake case lol
 #include <openssl/evp.h>
 
 #define MAX_MESSAGES 100
-#define MAX_MESSAGE_LENGTH 1025
+#define MAX_MESSAGE_LENGTH 1025 * 4
 #define KEY_LENGTH 32
 
 /* Function declarations*/
@@ -137,9 +137,6 @@ int main(int argc, char *argv[]) {
         currentMessage++;
     }
 
-    // Uses PRNG to create initial symmetric key using shared seed
-    // NEXT STEP ---------
-
     // allocate memory for key
     unsigned char *key = malloc(MAX_MESSAGE_LENGTH);
     if (!key) {
@@ -152,20 +149,43 @@ int main(int argc, char *argv[]) {
     messages[0].keyLen = KEY_LENGTH;
     memcpy(messages[0].key, key, KEY_LENGTH);
 
+    // printf("Initial key generated.\n");
+    // printf("Key: ");
+    // for (int i = 0; i < KEY_LENGTH; i++) {
+    //     printf("%02x", key[i]);
+    // }
+    // printf("\n");
+
     // currentMessasge becomes the total number of messages (at the end of the loop above)
     // For every message M
     //      Compute ciphertext C(i) = Encrypt(key(i), M(i))
     for (int i = 0; i < currentMessage; i++) {
         Encrypt_AES(messages[i].plainText, messages[i].plainTextLen, key, IV, messages[i].cipherText);
-        // printf("Message %d encrypted.\n", i+1);
+        printf("Message %d Ciphertext: ", i+1);
+        for (int j = 0; j < messages[i].plainTextLen; j++) {
+            printf("%02x", messages[i].cipherText[j]);
+        }
+        printf("\n\n\n");
         // Individual HMAC: S(i) = HMAC(key(i), E(i))
         Compute_HMAC(messages[i].cipherText, messages[i].plainTextLen, key, KEY_LENGTH, messages[i].hmac, KEY_LENGTH);
         // Aggregate HMAC: S(i) = Hash(S(1, i-1) || S(i))
+        // printf("Message %d key: ", i+1);
+        // for (int j = 0; j < KEY_LENGTH; j++) {
+        //     printf("%02x", messages[i].key[j]);
+        // }
+        // printf("\n");
         if (i == 0) {
             // first hmac is just a hash of the first message's hmac
             unsigned char *hashOutput = Hash_SHA256(messages[i].hmac, KEY_LENGTH);
             memcpy(messages[i].aggregateHmac, hashOutput, KEY_LENGTH);
             messages[i].aggregateHmacLen = KEY_LENGTH;
+
+            // fisrt hmac
+            // printf("Message %d HMAC: ", i+1);
+            // for (int j = 0; j < KEY_LENGTH; j++) {
+            //     printf("%02x", messages[i].hmac[j]);
+            // }
+            // printf("\n");
 
             free(hashOutput);
         }
@@ -181,6 +201,18 @@ int main(int argc, char *argv[]) {
             memcpy(messages[i].aggregateHmac, hashOutput, KEY_LENGTH);
             messages[i].aggregateHmacLen = KEY_LENGTH;
 
+            // printf("Message %d HMAC: ", i+1);
+            // for (int j = 0; j < KEY_LENGTH; j++) {
+            //     printf("%02x", messages[i].hmac[j]);
+            // }
+            // printf("\n");
+            
+            // printf("Aggregate HMAC after message %d: ", i+1);
+            // for (int j = 0; j < KEY_LENGTH; j++) {
+            //     printf("%02x", messages[i].aggregateHmac[j]);
+            // }
+            // printf("\n");
+
             free(hashInput);
             free(hashOutput);
         }
@@ -188,44 +220,51 @@ int main(int argc, char *argv[]) {
         unsigned char *newKey = malloc(KEY_LENGTH);
         newKey = Hash_SHA256(key, KEY_LENGTH);
         memcpy(key, newKey, KEY_LENGTH);
+        memcpy(messages[i+1].key, key, KEY_LENGTH);
+        free(newKey);
     }
 
 // Alice Writes in Hex
     // Keys in Keys.txt (multiple lines)
-    char keysHex[currentMessage][KEY_LENGTH*2];
-    for (int i = 0; i < currentMessage; i++) {
-        Bytes_to_Hex(messages[i].key, messages[i].keyLen, keysHex[i]);
+    char keysHex[currentMessage * KEY_LENGTH * 2];
+    for(int i =0; i < currentMessage; i++) {
+        char temp[KEY_LENGTH * 2];
+        Bytes_to_Hex(messages[i].key, KEY_LENGTH, temp);
+        memcpy(keysHex + (i * KEY_LENGTH * 2), temp, KEY_LENGTH * 2);
+        keysHex[(i+1) * KEY_LENGTH * 2 - 1] = '\n';
+        // printf("Key for message %d: %s\n", i+1, temp);
     }
-    char keysHexAll[currentMessage * KEY_LENGTH * 2];
-    for (int i = 0; i < currentMessage; i++) {
-        memcpy(keysHexAll + (i * KEY_LENGTH * 2), keysHex[i], KEY_LENGTH * 2);
-        keysHexAll[(i+1) * KEY_LENGTH * 2 - 1] = '\n';
-    }
-    Write_File("Keys.txt", keysHexAll, currentMessage * KEY_LENGTH * 2);
+    
+    // printf("Keys Hex all: %s\n", keysHex);
+    Write_File("Keys.txt", keysHex, currentMessage * KEY_LENGTH * 2);
     // Ciphertexts in Ciphertexts.txt (multiple lines)
-    char ciphertextsHex[currentMessage][KEY_LENGTH*2];
-    for (int i = 0; i < currentMessage; i++) {
-        Bytes_to_Hex(messages[i].cipherText, messages[i].cipherTextLen, ciphertextsHex[i]);
+    char ciphertextsHex[currentMessage * KEY_LENGTH * 2];
+    for(int i =0; i < currentMessage; i++) {
+        char temp[KEY_LENGTH * 2];
+        Bytes_to_Hex(messages[i].cipherText, KEY_LENGTH, temp);
+        memcpy(ciphertextsHex + (i * KEY_LENGTH * 2), temp, KEY_LENGTH * 2);
+        ciphertextsHex[(i+1) * KEY_LENGTH * 2 - 1] = '\n';
+        // printf("Ciphertext for message %d: %s\n", i+1, temp);
     }
-    char ciphertextsHexAll[currentMessage * KEY_LENGTH * 2];
-    for (int i = 0; i < currentMessage; i++) {
-        memcpy(ciphertextsHexAll + (i * KEY_LENGTH * 2), ciphertextsHex[i], KEY_LENGTH * 2);
-        ciphertextsHexAll[(i+1) * KEY_LENGTH * 2 - 1] = '\n';
-    }
-    Write_File("Ciphertexts.txt", ciphertextsHexAll, currentMessage * KEY_LENGTH * 2);
+    // printf("Ciphertexts Hex all: %s\n", ciphertextsHex);
+    Write_File("Ciphertexts.txt", ciphertextsHex, currentMessage * KEY_LENGTH * 2);
     // Individual HMACs in IndividualHMACs.txt (multiple lines)
-    char individualHMACsHex[currentMessage][KEY_LENGTH*2];
-    for (int i = 0; i < currentMessage; i++) {
-        Bytes_to_Hex(messages[i].hmac, KEY_LENGTH, individualHMACsHex[i]);
+    char individualHMACsHex[currentMessage * KEY_LENGTH * 2];
+    for(int i =0; i < currentMessage; i++) {
+        char temp[KEY_LENGTH * 2];
+        Bytes_to_Hex(messages[i].hmac, KEY_LENGTH, temp);
+        memcpy(individualHMACsHex + (i * KEY_LENGTH * 2), temp, KEY_LENGTH * 2);
+        individualHMACsHex[(i+1) * KEY_LENGTH * 2 - 1] = '\n';
+        // printf("HMAC for message %d: %s\n", i+1, temp);
     }
-    char individualHMACsHexAll[currentMessage * KEY_LENGTH * 2];
-    for (int i = 0; i < currentMessage; i++) {
-        memcpy(individualHMACsHexAll + (i * KEY_LENGTH * 2), individualHMACsHex[i], KEY_LENGTH * 2);
-        individualHMACsHexAll[(i+1) * KEY_LENGTH * 2 - 1] = '\n';
-    }
-    Write_File("IndividualHMACs.txt", individualHMACsHexAll, currentMessage * KEY_LENGTH * 2);
+    Write_File("IndividualHMACs.txt", individualHMACsHex, currentMessage * KEY_LENGTH * 2);
     // Aggregated HMAC in AggregateHMAC.txt
-    Write_File("AggregatedHMAC.txt", messages[currentMessage-1].aggregateHmac, KEY_LENGTH * 2);
+    // printf("Final Aggregate HMAC: ");
+    // for (int j = 0; j < KEY_LENGTH; j++) {
+    //     printf("%02x", messages[currentMessage-1].aggregateHmac[j]);
+    // }
+    // printf("\n");
+    Write_File("AggregatedHMAC.txt", (char *)messages[currentMessage-1].aggregateHmac, KEY_LENGTH * 2);
 
     free(key);
     free(messagesAll);
