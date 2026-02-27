@@ -162,7 +162,7 @@ void Write_File(char fileName[], char input[], int input_length){
   FILE *pFile;
   pFile = fopen(fileName,"w");
   if (pFile == NULL){
-    printf("Error opening file. \n");
+    printf("Error writing file. \n");
     exit(0);
   }
   //fputs(input, pFile);
@@ -226,7 +226,7 @@ unsigned char* Read_File (char fileName[], int *fileLen)
 	pFile = fopen(fileName, "r");
 	if (pFile == NULL)
 	{
-		printf("Error opening file.\n");
+		printf("Error reading file.\n");
 		exit(0);
 	}
     fseek(pFile, 0L, SEEK_END);

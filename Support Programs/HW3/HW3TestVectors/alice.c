@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
     
     unsigned char IV[16] = "abcdefghijklmnop";
 
-    if(argc != 2) {
+    if(argc != 3) {
         printf("Incorrect number of arguments.\n");
         return 1;
     }
@@ -186,7 +186,7 @@ int main(int argc, char *argv[]) {
         }
         // Update key for every message: key(i+1) = Hash(key(i))
         unsigned char *newKey = malloc(KEY_LENGTH);
-        *newKey = Hash_SHA256(key, KEY_LENGTH);
+        newKey = Hash_SHA256(key, KEY_LENGTH);
         memcpy(key, newKey, KEY_LENGTH);
     }
 
@@ -225,7 +225,7 @@ int main(int argc, char *argv[]) {
     }
     Write_File("IndividualHMACs.txt", individualHMACsHexAll, currentMessage * KEY_LENGTH * 2);
     // Aggregated HMAC in AggregateHMAC.txt
-    Write_File("AggregateHMAC.txt", individualHMACsHex[currentMessage-1], KEY_LENGTH * 2);
+    Write_File("AggregatedHMAC.txt", messages[currentMessage-1].aggregateHmac, KEY_LENGTH * 2);
 
     free(key);
     free(messagesAll);
@@ -238,13 +238,20 @@ int Compute_HMAC(const unsigned char* data, const int datalen, const unsigned ch
     params[0] = OSSL_PARAM_construct_utf8_string("digest", "SHA256", 0);
     params[1] = OSSL_PARAM_construct_end();
     EVP_MAC* mac = EVP_MAC_fetch(NULL, "HMAC", NULL);
-    
-    EVP_MAC_CTX *ctx = EVP_MAC_CTX_new(mac);    
+    if(!mac){
+        printf("mac failed.\n");
+        return 1;
+    }
+    EVP_MAC_CTX *ctx = EVP_MAC_CTX_new(mac);
+    if(!ctx){    
+        printf("ctx failed.\n");
+        return 1;    
+    }
     EVP_MAC_init(ctx, key, keylen, params);
     EVP_MAC_update(ctx, data, datalen);
-    size_t HMAC_len;
+    size_t HMAC_len = 0;
     EVP_MAC_final(ctx, HMAC, &HMAC_len, HMAC_size);
-
+    
     EVP_MAC_free(mac);
     EVP_MAC_CTX_free(ctx);
 
