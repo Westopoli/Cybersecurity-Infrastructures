@@ -53,7 +53,7 @@ struct MessageInfo {
 int main(int argc, char *argv[]) {
 
     // argc check
-    if(argc != 4){
+    if(argc != 2){
         printf("Invalid number of arguments.\n");
         return 1;
     }
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 
     int i = 0;
     int message_len = 0;
-    FILE *fp = fopen(argv[2], "r");
+    FILE *fp = fopen("Ciphertexts.txt", "r");
     while(fgets(buffer, MAX_MESSAGE_LENGTH, fp) != NULL){
         // Copies message into buffer w/o newline, gets message len
         message_len = strcspn(buffer, "\n");
@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
     // Get correct aggregated HMAC
     int file_len;
     unsigned char correct_aggregated_HMAC[HMAC_LENGTH];
-    memcpy(buffer, Read_File(argv[3], &file_len), 2 * HMAC_LENGTH);
+    memcpy(buffer, Read_File("AggregatedHMAC.txt", &file_len), 2 * HMAC_LENGTH);
     Hex_to_Bytes(buffer, correct_aggregated_HMAC, 2 * HMAC_LENGTH);
 
     unsigned char hex[MAX_MESSAGE_LENGTH];
