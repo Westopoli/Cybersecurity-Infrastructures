@@ -1,9 +1,30 @@
-// Puzzle Solving Program - Client Side
+/*
+Client–Server Proof-of-Work Puzzle Protocol
+Client – Puzzle Solver
 
-// Client program to prove there were computations spent solving the puzzle, DoS for
-// prevention reads the challenge and difficulty, computes the puzzle solution by 
-// finding the right nonce (k leading bits are 0), and write solution to repsective 
-// files.
+This program implements the client-side solving component of
+a hash-based Proof-of-Work (PoW) protocol for DoS mitigation.
+
+The client receives a challenge and difficulty parameter k,
+then performs a brute-force search to find a nonce such that:
+
+    SHA256(challenge || nonce)
+
+contains k leading zero bits.
+
+Functionality:
+- Reads puzzle challenge and difficulty
+- Performs iterative nonce search
+- Verifies leading zero bits
+- Outputs solution nonce and iteration count
+
+Cryptographic Primitive:
+- SHA256 (OpenSSL)
+
+Security Goal:
+To demonstrate computational work before accessing protected
+server resources.
+*/
 
 // Psuedocode: 
 //  1. Read challenge from puzzle_challenge.txt as a char (hex string) and convert to byte array
@@ -18,17 +39,6 @@
     // Use bit masking for partial byte check
 // 5. Write nonce to solution_nonce.txt as Hex string 
 // 6. Write iteration count to solution_iterations.txt as ASCII integer 
-
-// Debugging issues
-    // This program took like 7 hours total lol
-    // First the given Write_File function was producing a segmentation fault
-    // Then I failed at implementing the proper logic for counting leading zeroes multiple times
-    // Then the nonce was always wrong and I couldn't figure out why
-        // Writing big endian -> .sh expected little endian (took forever to figure out, big boi facepalm)
-        // nonce was incremented one more time than needed because of an incorrect interation line location
-    // And finally there were significant sizing issues with literally every variable. I figured out the hard
-    // way that sizeof(pointer) doesn't work, among many many other very depressing sizing mistakes lol. 
-    // I hope it's helpful that I kept all the old versions of the code commented out. 
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,16 +69,10 @@ int main(int argc, char *argv[]) {
     int challenge_hex_len;
     int difficulty;
     char *challenge_in_hex = Read_File(userChallengeFileArg, &challenge_hex_len);
-    // for(int i = 0; i < sizeof(challenge_in_hex); i++){
-    //     printf("%d", challenge_in_hex[i]);
-    // }
-    // printf("\n");
+    
     char *challenge_in_bytes = (char *)malloc(challenge_hex_len / 2);
     int challenge_len = Hex_To_Bytes(challenge_in_hex, (unsigned char *)challenge_in_bytes, challenge_hex_len);
-    // for(int i = 0; i < sizeof(challenge_in_bytes); i++){
-    //     printf("%d", challenge_in_bytes[i]);
-    // }
-    // printf("\n");
+    
     
     // Read difficulty as integer
     difficulty = Read_Int_From_File(userDifficultyFileArg);

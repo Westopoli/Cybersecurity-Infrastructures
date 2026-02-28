@@ -1,9 +1,29 @@
-// Puzzle Generation Program
-//      note: this is the first of 3 programs working together to implement a client-server puzzle for DDoS prevention.
+/*
+Client–Server Proof-of-Work Puzzle Protocol
+Server – Puzzle Generation
 
-// Server program reads the challenge data from Challenge$i.txt which contains the timestamp || server_nonce
-// Then it reads the difficulty from Difficulty$i.txt
-// It writes the challenge to puzzle_challenge.txt as a hex string and the difficulty to puzzle_k.txt as ASCII integer
+This program implements the server-side puzzle generation component
+of a hash-based Proof-of-Work (PoW) protocol designed to mitigate
+Denial-of-Service (DoS) attacks.
+
+The server constructs a computational challenge that requires
+clients to perform work before service is granted.
+
+Functionality:
+- Reads a 32-byte challenge (timestamp || server nonce)
+- Reads difficulty parameter k
+- Broadcasts puzzle challenge and difficulty to clients
+
+Puzzle Type:
+- SHA256-based k leading zero bit puzzle
+
+Cryptographic Primitive:
+- SHA256 (OpenSSL)
+
+Security Goal:
+To force clients to expend computational effort, increasing the
+cost of large-scale automated DoS attacks.
+*/
 
 
 #include <stdio.h>

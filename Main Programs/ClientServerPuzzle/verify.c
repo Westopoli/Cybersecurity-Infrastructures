@@ -1,7 +1,28 @@
-// Puzzle Generation Program
-// This program acts as the server's verification of the client's proof of computation for DoS 
-// prevention. It reads the challenge (similar to the client) and computes the hash
-// with the client's nonce and checks that it has the correct number of leading 0 bits.
+/*
+Client–Server Proof-of-Work Puzzle Protocol
+Server – Solution Verification
+
+This program implements the server-side verification component
+of a hash-based Proof-of-Work (PoW) protocol.
+
+It verifies whether a client-provided nonce satisfies the
+k leading zero bit requirement for:
+
+    SHA256(challenge || nonce)
+
+Functionality:
+- Reads challenge, difficulty k, and client nonce
+- Recomputes SHA256(challenge || nonce)
+- Checks k leading zero bits
+- Outputs ACCEPT or REJECT
+
+Cryptographic Primitive:
+- SHA256 (OpenSSL)
+
+Security Goal:
+To securely validate client work and prevent unauthorized access
+when invalid solutions are submitted.
+*/
 
 // Pseudocode
 // Input: Challenge, difficulty k, solution nonce
@@ -14,17 +35,6 @@
 // 6) Check if hash has k leading zero bits
 // 7) If yes: Write ”ACCEPT”, exit 0
 // 8) If no: Write ”REJECT”, exit 1
-
-// Debugging issues
-    // This program took about 3-4 hours total, most of which was all debugging one issue :')
-    // First my program was reading a different thing than I was writing to the file, which was very confusing. 
-        // turned out to be a type difference, reading as a string but writing as bytes (facepalm)
-    // The nonce being off by one in the client program also threw me off hard, thought it was an issue with 
-    // this program, but in the end it wasn't. 
-    // And finally, the magnum opus of problems, the verification result from the .sh. 
-    // When I would run the program manually, the verificaiton was correct, but when I ran the .sh, it was wrong.
-    // After significant blood/sweat/tears, I realized I wasn't adding a null character to the end of the string............. facepalm x1000000000000000000000.
-        // Literally spent like 2 whole hours tryig to figure that out :')
 
 #include <stdio.h>
 #include <stdlib.h>
