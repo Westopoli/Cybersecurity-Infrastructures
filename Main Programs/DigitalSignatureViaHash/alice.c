@@ -1,3 +1,20 @@
+/*
+Digital Signature via Hash Program
+
+This program implements a simple integrity verification scheme using
+a shared seed and SHA256. Alice generates a secret key from the shared
+seed using the ChaCha20 PRNG and encrypts the message via XOR
+(Ciphertext = Message XOR Key). Bob regenerates the same key to
+decrypt the message and computes a SHA256 hash of the plaintext.
+Alice verifies the received hash to confirm message integrity and
+authenticity, then records either a successful or failed acknowledgment.
+
+Cryptographic Primitives Used:
+- ChaCha20 PRNG (OpenSSL)
+- SHA256 (OpenSSL)
+- XOR-based symmetric encryption
+*/
+
 // Alice reads the message from the ”Message.txt” file and the he shared seed from the ”SharedSeed.txt” file. 
 // Then the secret key is generated from the shared seed based on utilizing the ChaCha20 PRNG function from OpenSSL. The key size must match the message length.
 // Then the Hex format of the key is written in a file named “Key.txt”.

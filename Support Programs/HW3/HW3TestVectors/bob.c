@@ -96,11 +96,7 @@ int main(int argc, char *argv[]) {
     int i = 0;
     int message_len = 0;
     FILE *fp = fopen("Ciphertexts.txt", "r");
-<<<<<<< HEAD
-    while(fgets((char*)buffer, MAX_MESSAGE_LENGTH, fp) != NULL){
-=======
     while(fgets(buffer, MAX_MESSAGE_LENGTH, fp) != NULL){
->>>>>>> b2e10dc8c15f2971f8632d32a80fc377254a54f5
         // Copies message into buffer w/o newline, gets message len
         message_len = strcspn((char*)buffer, "\n");
         buffer[message_len] = '\0';
@@ -149,11 +145,7 @@ int main(int argc, char *argv[]) {
     int file_len;
     unsigned char correct_aggregated_HMAC[HMAC_LENGTH];
     memcpy(buffer, Read_File("AggregatedHMAC.txt", &file_len), 2 * HMAC_LENGTH);
-<<<<<<< HEAD
-    Hex_to_Bytes((char*)buffer, correct_aggregated_HMAC, 2 * HMAC_LENGTH);
-=======
     Hex_to_Bytes(buffer, correct_aggregated_HMAC, 2 * HMAC_LENGTH);
->>>>>>> b2e10dc8c15f2971f8632d32a80fc377254a54f5
 
     unsigned char hex[MAX_MESSAGE_LENGTH];
     // Confirm if calculated aggregate HMAC is valid
