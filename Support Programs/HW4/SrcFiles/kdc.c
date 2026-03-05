@@ -6,6 +6,8 @@
 #include <openssl/ec.h>
 #include <openssl/rand.h>
 
+// #include <unistd.h> // For access() if needed
+
 /*
  * ============================================================
  * Kerberos KDC / Authentication Server — ASSIGNMENT TEMPLATE
@@ -27,7 +29,7 @@
  * OVERALL FLOW (AS PHASE):
  *
  * 1) Verify the client’s signature on its temporary public key
- * 2) Derive a shared secret using ECDH
+ * 2) Derive a shared secret using ECDH (Elliptic Curve Diffie-Hellman)
  * 3) Derive Key_Client_AS from the shared secret
  * 4) Issue a Ticket Granting Ticket (TGT)
  * 5) Build and encrypt AS_REP.txt
@@ -51,48 +53,48 @@
  * Invocation: ./kdc <Client_Signature.txt> <Client_temp_PK.txt>
  *                   <AS_temp_SK.txt> <AS_temp_PK.txt>
  *
- * STEP 1 - ARGUMENT CHECK
+ * ARGUMENT CHECK
  *   Verify exactly 4 command-line arguments are provided.
  *   If not, print usage message and exit with EXIT_FAILURE.
  *
- * STEP 2 - VERIFY INPUT FILES EXIST
+ * VERIFY INPUT FILES EXIST
  *   Check that Client_Signature.txt, AS_temp_SK.txt, and AS_temp_PK.txt
  *   are all present on disk.
  *   If any are missing, print an error and exit.
  *
- * STEP 3 - VERIFY CLIENT SIGNATURE (ECDSA)
+ * VERIFY CLIENT SIGNATURE (ECDSA)
  *   Load the long-term client verification key from Client_PK.txt.
  *   Verify the ECDSA signature in Client_Signature.txt
  *   over the contents of Client_temp_PK.txt.
  *   If verification fails, terminate — the client is not authenticated.
  *
- * STEP 4 - COMPUTE ECDH SHARED SECRET
+ * COMPUTE ECDH SHARED SECRET
  *   Compute: shared_secret = ECDH(AS_temp_SK, Client_temp_PK)
  *   Write the hex-encoded shared secret to shared_secret.txt.
  *
- * STEP 5 - DERIVE CLIENT-AS SESSION KEY (SHA-256)
+ * DERIVE CLIENT-AS SESSION KEY (SHA-256)
  *   Hash the shared secret using SHA-256 to produce Key_Client_AS.
  *   Write the hex-encoded key to Key_Client_AS.txt.
  *
- * STEP 6 - READ PRE-GENERATED SESSION KEYS
+ * READ PRE-GENERATED SESSION KEYS
  *   Read the 256-bit client-TGS session key from Key_Client_TGS.txt (hex).
  *   Read the shared AS-TGS symmetric key from Key_AS_TGS.txt (hex).
  *   If either file is unreadable or invalid, terminate.
  *
- * STEP 7 - BUILD THE TICKET GRANTING TICKET (AES-256-ECB)
+ * BUILD THE TICKET GRANTING TICKET (AES-256-ECB)
  *   Construct TGT plaintext as:
  *     TGT_plain = "Client" || Key_Client_TGS_hex
  *   Encrypt TGT_plain using AES-256-ECB with Key_AS_TGS.
  *   Hex-encode the resulting ciphertext to produce TGT.
  *
- * STEP 8 - BUILD AND WRITE THE AS REPLY (AES-256-ECB)
+ * BUILD AND WRITE THE AS REPLY (AES-256-ECB)
  *   Construct AS reply plaintext as:
  *     AS_REP_plain = Key_Client_TGS (32 raw bytes) || TGT (hex string)
  *   Encrypt AS_REP_plain using AES-256-ECB with Key_Client_AS.
  *   Write the hex-encoded ciphertext to AS_REP.txt.
  *   If any encryption or file-write step fails, exit with error.
  *
- * STEP 9 - COMPLETION
+ * COMPLETION
  *   Exit with EXIT_SUCCESS.
  *   The AS phase is complete: the client has been authenticated and
  *   a TGT has been issued for use with the TGS.
@@ -150,6 +152,40 @@ int main(int argc, char *argv[])
 	 *  - Print descriptive errors and exit on failure
 	 */
 
+	// Elegant solution
+	// if (access(client_sig_path, F_OK) == -1) {
+	// 	fprintf(stderr, "Error: Client signature file '%s' not found.\n", client_sig_path);
+	// 	return EXIT_FAILURE;
+	// }
+	// if (access(as_temp_sk_path, F_OK) == -1) {
+	// 	fprintf(stderr, "Error: AS temporary private key file '%s' not found.\n", as_temp_sk_path);
+	// 	return EXIT_FAILURE;
+	// }
+	// if (access(as_temp_pk_path, F_OK) == -1) {
+	// 	fprintf(stderr, "Error: AS temporary public key file '%s' not found.\n", as_temp_pk_path);
+	// 	return EXIT_FAILURE;
+	// }
+
+	FILE *fp = fopen(client_sig_path, "r");
+
+	if (fp == NULL) {
+		fprintf(stderr, "Error: Client signature file '%s' not found.\n", client_sig_path);
+		return EXIT_FAILURE;
+	}
+	fclose(fp);
+	fp = fopen(as_temp_sk_path, "r");
+	if (fp == NULL) {
+		fprintf(stderr, "Error: AS temporary private key file '%s' not found.\n", as_temp_sk_path);
+		return EXIT_FAILURE;
+	}
+	fclose(fp);
+	fp = fopen(as_temp_pk_path, "r");
+	if (fp == NULL) {
+		fprintf(stderr, "Error: AS temporary public key file '%s' not found.\n", as_temp_pk_path);
+		return EXIT_FAILURE;
+	}
+	fclose(fp);
+
 	/* ------------------------------------------------------------
 	 * STEP 1: Verify client identity
 	 *
@@ -169,6 +205,8 @@ int main(int argc, char *argv[])
 	 *  - Use Client_PK.txt as the verification key
 	 *  - Treat failure as an authentication failure
 	 */
+
+	ecdsa_verify_file_from_hex("Client_PK.txt", client_temp_pk_path, client_sig_path);
 
 	/* ------------------------------------------------------------
 	 * STEP 2: Derive shared secret (ECDH)
