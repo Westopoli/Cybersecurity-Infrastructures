@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 	// 	return EXIT_FAILURE;
 	// }
 
-	FILE *fp = fopen(client_sig_path, "r");
+	FILE* fp = fopen(client_sig_path, "r");
 
 	if (fp == NULL) {
 		fprintf(stderr, "Error: Client signature file '%s' not found.\n", client_sig_path);
@@ -226,6 +226,13 @@ int main(int argc, char *argv[])
 	 *  - Write the shared secret to shared_secret.txt (hex)
 	 */
 
+	unsigned char* shared_secret = NULL;
+	size_t shared_secret_len = 0;
+
+	ecdh_shared_secret_files(as_temp_sk_path, client_temp_pk_path, &shared_secret, &shared_secret_len);
+
+	write_hex_file("shared_secret.txt", shared_secret, shared_secret_len);
+
 	/* ------------------------------------------------------------
 	 * STEP 3: Derive Key_Client_AS
 	 *
@@ -243,6 +250,10 @@ int main(int argc, char *argv[])
 	 *  - Write exactly 32 bytes to Key_Client_AS.txt
 	 */
 
+	sha256_bytes(shared_secret, shared_secret_len, key_client_as);
+
+	write_hex_file("Key_Client_AS.txt", key_client_as, 32);
+
 	/* ------------------------------------------------------------
 	 * STEP 4: Load pre-generated session key (Client ↔ TGS)
 	 *
@@ -259,6 +270,13 @@ int main(int argc, char *argv[])
 	 *  - Validate length
 	 *  - Store raw bytes in key_client_tgs
 	 */
+	int* key_client_tgs_len = 0;
+
+	read_hex_file_bytes("Key_Client_TGS.txt", &key_client_tgs, key_client_tgs_len);
+	if(key_client_tgs_len != 32) {
+		fprintf(stderr, "Error: Key_Client_TGS.txt must contain exactly 32 bytes (256 bits).\n");
+		return EXIT_FAILURE;
+	}
 
 	/* ------------------------------------------------------------
 	 * STEP 5: Build the Ticket Granting Ticket (TGT)
@@ -286,6 +304,30 @@ int main(int argc, char *argv[])
 	 *  - Hex-encode the ciphertext
 	 */
 
+	int key_client_as_len = 0;
+
+	read_hex_file_bytes("Key_AS_TGS.txt", &key_client_as, &key_client_as_len);
+	if(key_client_as_len != 32) {
+		fprintf(stderr, "Error: Key_AS_TGS.txt must contain exactly 32 bytes (256 bits).\n");
+		return EXIT_FAILURE;
+	}
+
+	// Figured out that aes256_ecb_encrypt does not need a null character
+	// size_t tgt_len = 6 + 32 + 1;
+	// char* tgt = malloc(tgt_len);
+	// memcpy(tgt, "Client", 6);
+	// memcpy(tgt + 6, key_client_tgs, 32);
+	// tgt[tgt_len - 1] = '\0';
+
+	size_t tgt_len = 6 + 32;
+	char* tgt = malloc(tgt_len);
+	memcpy(tgt, "Client", 6);
+	memcpy(tgt + 6, key_client_tgs, 32);
+
+	char* tgt_hex = NULL;
+	aes256_encrypt_bytes_to_hex_string(key_client_as, (unsigned char *)tgt, tgt_len, &tgt_hex);
+
+
 	/* ------------------------------------------------------------
 	 * STEP 6: Build AS_REP
 	 *
@@ -309,6 +351,19 @@ int main(int argc, char *argv[])
 	 *  - Hex-encode ciphertext
 	 *  - Write to AS_REP.txt (single line)
 	 */
+
+	unsigned char* as_rep_plain = malloc(32 + tgt_len);
+	int as_rep_plain_len = 32 + (int)tgt_len;
+	int as_rep_len = 0;
+	unsigned char* as_rep_hex = NULL;
+	
+
+	memcpy(as_rep_plain, key_client_as, 32);
+	memcpy(as_rep_plain + 32, tgt_hex, tgt_len);
+	
+	aes256_encrypt_bytes_to_hex_string(key_client_as, as_rep_plain, as_rep_plain_len, &as_rep_hex);
+	// confrirmed that as_rep_hex will have a null terminator so we can use strlen safetly
+	write_hex_file("AS_REP.txt", as_rep_hex, strlen((char *)as_rep_hex));
 
 	return EXIT_SUCCESS;
 }
