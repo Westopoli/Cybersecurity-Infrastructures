@@ -49,23 +49,23 @@
  * Invocation: ./tgs <TGS_REQ.txt> <Key_AS_TGS.txt> <Key_Client_TGS.txt>
  *                   <Key_Client_App.txt> <Key_TGS_App.txt>
  *
- * STEP 1 - ARGUMENT CHECK
+ * ARGUMENT CHECK
  *   Verify exactly 5 command-line arguments are provided.
  *   If not, print usage message and exit with EXIT_FAILURE.
  *
- * STEP 2 - WAIT FOR TGS REQUEST
+ * WAIT FOR TGS REQUEST
  *   Check if TGS_REQ.txt exists.
  *   If missing, print "TGS_REQ not created" and exit.
  *   The verification script will re-invoke the TGS later.
  *
- * STEP 3 - READ AND DECRYPT THE TGT (AES-256-ECB)
+ * READ AND DECRYPT THE TGT (AES-256-ECB)
  *   Read the TGT hex string from line 1 of TGS_REQ.txt.
  *   Read Key_AS_TGS from Key_AS_TGS.txt.
  *   Decrypt the TGT using AES-256-ECB with Key_AS_TGS.
  *   Obtain plaintext: clientID || Key_Client_TGS_hex
  *   If decryption fails or plaintext is too short, exit with error.
  *
- * STEP 4 - PARSE CLIENT ID AND CLIENT-TGS KEY
+ * PARSE CLIENT ID AND CLIENT-TGS KEY
  *   Split the TGT plaintext into:
  *     - clientID (variable-length string prefix)
  *     - Key_Client_TGS_hex (trailing 64-character hex string = 32 bytes)
@@ -73,18 +73,18 @@
  *   Compare it byte-for-byte against Key_Client_TGS.txt.
  *   Any mismatch or invalid hex terminates the program.
  *
- * STEP 5 - DECRYPT CLIENT AUTHENTICATOR (AES-256-ECB)
+ * DECRYPT CLIENT AUTHENTICATOR (AES-256-ECB)
  *   Read Auth_Client_TGS (hex) from line 2 of TGS_REQ.txt.
  *   Decrypt it using AES-256-ECB with Key_Client_TGS.
  *   This conceptually verifies the client holds the correct session key.
  *   If decryption fails, exit.
  *
- * STEP 6 - READ THE CLIENT-APPLICATION SESSION KEY
+ * READ THE CLIENT-APPLICATION SESSION KEY
  *   Read the pre-generated Key_Client_App from Key_Client_App.txt.
  *   Store both binary and hex-string forms for use in subsequent steps.
  *   If the key is unreadable or invalid, terminate.
  *
- * STEP 7 - BUILD THE APPLICATION TICKET (AES-256-ECB)
+ * BUILD THE APPLICATION TICKET (AES-256-ECB)
  *   Construct application ticket plaintext as:
  *     Ticket_App_plain = clientID || Key_Client_App_hex
  *   Read Key_TGS_App from Key_TGS_App.txt.
@@ -92,12 +92,12 @@
  *   Hex-encode the result to produce Ticket_App.
  *   If encryption fails, terminate.
  *
- * STEP 8 - ENCRYPT CLIENT-APPLICATION KEY FOR CLIENT (AES-256-ECB)
+ * ENCRYPT CLIENT-APPLICATION KEY FOR CLIENT (AES-256-ECB)
  *   Encrypt Key_Client_App_hex using AES-256-ECB with Key_Client_TGS.
  *   Hex-encode the result to produce enc_key_client_app.
  *   This lets the client securely receive their app session key.
  *
- * STEP 9 - WRITE TGS REPLY
+ * WRITE TGS REPLY
  *   Write TGS_REP.txt with two lines:
  *     Line 1: Ticket_App (hex)
  *     Line 2: enc_key_client_app (hex)
@@ -150,7 +150,16 @@ int main(int argc, char *argv[]) {
 	 *  - If missing, print required message and exit
 	 */
 
-	printf("TGS_REQ received\n");
+	int counter = 0;
+
+	while (!file_exists(tgs_req_path)) {
+		sleep(1);  // Check every second
+		counter++;
+		if (counter > 60) {  // Timeout after 60 seconds
+			fprintf(stderr, "TGS_REQ not created\n");
+			return EXIT_FAILURE;
+		}
+	}
 
 	/* ------------------------------------------------------------
 	 * STEP 1: Read and decrypt the Ticket Granting Ticket (TGT)
@@ -177,6 +186,33 @@ int main(int argc, char *argv[]) {
 	 *  - Treat the result as ASCII data
 	 */
 
+	unsigned char *tgt_hex = NULL;
+	size_t tgt_hex_len = 0;
+	if (!read_hex_file_bytes(tgs_req_path, &tgt_hex, &tgt_hex_len)) {
+		fprintf(stderr, "Error reading from TGS_REQ.txt\n");
+		return EXIT_FAILURE;
+	}
+
+	unsigned char key_as_tgs[32];
+	size_t key_as_tgs_len = 0;
+	if (!read_hex_file_bytes(key_as_tgs_path, &key_as_tgs, &key_as_tgs_len)) {
+		fprintf(stderr, "Error reading from Key_AS_TGS.txt\n");
+		free(tgt_hex);
+		return EXIT_FAILURE;
+	}
+
+	unsigned char *tgt_plain = NULL;
+	size_t tgt_plain_len = 0;
+	if (!aes256_ecb_decrypt(key_as_tgs, (char *)tgt_hex, &tgt_hex_len, &tgt_plain, &tgt_plain_len)) {
+		fprintf(stderr, "Error decrypting TGT\n");
+		free(tgt_hex);
+		free(key_as_tgs);
+		return EXIT_FAILURE;
+	}
+	free(tgt_hex);
+	free(key_as_tgs);
+
+
 	/* ------------------------------------------------------------
 	 * STEP 2: Parse client identity and Key_Client_TGS
 	 *
@@ -193,6 +229,8 @@ int main(int argc, char *argv[]) {
 	 *  - Convert Key_Client_TGS hex → raw bytes
 	 *  - Abort if parsing or conversion fails
 	 */
+
+	
 
 	/* ------------------------------------------------------------
 	 * STEP 3: Verify client authenticator
