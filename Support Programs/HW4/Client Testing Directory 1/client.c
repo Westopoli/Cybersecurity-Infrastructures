@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
 	 *  - Check if "AS_REP.txt" exists
 	 *  - If not, print a status message and exit SUCCESSFULLY
 	 */
-	if(file_exists("AS_REP.txt") == 0){	// Cor
+	if(file_exists("Correct_AS_REP_1.txt") == 0){	//
 		printf("Could not find 'AS_REP.txt'.\n");
 		return 0;
 	}
@@ -249,7 +249,7 @@ int main(int argc, char *argv[]) {
 	// Obtain shared key from AS
 	unsigned char* reference_key = NULL;
 	size_t reference_key_len = 0;
-	if(read_hex_file_bytes("Key_Client_AS.txt", &reference_key, &reference_key_len) == 0){	// Cor
+	if(read_hex_file_bytes("Correct_Key_Client_AS_1.txt", &reference_key, &reference_key_len) == 0){	//
 		printf("Could not read Key_Client_AS_txt.\n");
 		return 1;
 	}
@@ -289,7 +289,7 @@ int main(int argc, char *argv[]) {
 	unsigned char* as_rep_plaintext = NULL;
 	size_t as_rep_plaintext_len = 0;
 	
-	if(aes256_decrypt_hex_file_to_bytes(key_client_as, "AS_REP.txt", &as_rep_plaintext, &as_rep_plaintext_len) == 0){		// Cor
+	if(aes256_decrypt_hex_file_to_bytes(key_client_as, "Correct_AS_REP_1.txt", &as_rep_plaintext, &as_rep_plaintext_len) == 0){
 		printf("Decryption of AS_REP.txt failed.\n");
 		return 1;
 	}
@@ -371,7 +371,7 @@ int main(int argc, char *argv[]) {
 	 *  - Check existence of "TGS_REP.txt"
 	 *  - If not present, print status and exit SUCCESSFULLY
 	 */
-	if(file_exists("TGS_REP.txt") == 0){		// Cor
+	if(file_exists("Correct_TGS_REP_1.txt") == 0){
 		printf("Could not find 'TGS_REP.txt'.\n");
 		return EXIT_SUCCESS;
 	}
@@ -393,7 +393,7 @@ int main(int argc, char *argv[]) {
 	 *  - Convert hex string to raw bytes
 	 *  - Store exactly 32 bytes in key_client_app
 	 */
-	unsigned char* enc_key_client_app = read_line("TGS_REP.txt", 2);		// Cor
+	unsigned char* enc_key_client_app = read_line("Correct_TGS_REP_1.txt", 2);
 	unsigned char* key_client_app_hex = NULL;
 	size_t key_client_app_len = 0;
 	if(aes256_decrypt_hex_string_to_bytes(key_client_tgs, enc_key_client_app, &key_client_app_hex, &key_client_app_len) == 0){
@@ -449,7 +449,7 @@ int main(int argc, char *argv[]) {
 	}
 	unsigned char* Auth_Client_App_hex = bytes_to_hex(Auth_Client_App, Auth_Client_App_len);
 
-	unsigned char* ticket_app_hex = read_line("TGS_REP.txt", 1);	// Cor
+	unsigned char* ticket_app_hex = read_line("Correct_TGS_REP_1.txt", 1);
 
 	if(write_text_lines("APP_REQ.txt", ticket_app_hex, Auth_Client_App_hex, "") == 0){
 		printf("Could not write to APP_REQ.txt.\n");
