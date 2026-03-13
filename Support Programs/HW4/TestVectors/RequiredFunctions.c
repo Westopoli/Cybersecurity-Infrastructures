@@ -69,27 +69,19 @@ static int write_text_lines(const char *path, const char *l1, const char *l2, co
 }
 
 static int hex_to_bytes(const char *hex, unsigned char **out, size_t *out_len) {
-	if (!hex){
-		printf("Debug1.\n");
+	if (!hex)
 		return 0;
-	}
 	size_t len = strlen(hex);
-	if (len % 2 != 0){
-		printf("Debug2.\n");
+	if (len % 2 != 0)
 		return 0;
-	}
 	size_t blen = len / 2;
 	unsigned char *buf = malloc(blen);
-	if (!buf){
-		printf("Debug3.\n");
+	if (!buf)
 		return 0;
-
-	}
 	for (size_t i = 0; i < blen; i++) {
 		unsigned int v;
 		if (sscanf(hex + 2 * i, "%2x", &v) != 1) {
 			free(buf);
-			printf("Debug4.\n");
 			return 0;
 		}
 		buf[i] = (unsigned char)v;
