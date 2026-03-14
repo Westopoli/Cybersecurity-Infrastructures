@@ -490,6 +490,8 @@ static int ecdsa_sign_file_to_hex(const char *sk_path, const char *msg_path, con
 		return 0;
 	}
 	size_t read_n = fread(buf, 1, (size_t)sz, f);
+		printf("1st: %d\n2nd: %d\n", sz, read_n);
+
 	fclose(f);
 	if (read_n != (size_t)sz) {
 		free(buf);

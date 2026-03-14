@@ -134,7 +134,10 @@ int main(int argc, char *argv[]) {
 	 *  - Check existence of app_req_path
 	 *  - If missing, print required message and exit
 	 */
-
+	if(file_exists(app_req_path) == 0){	// Cor
+		printf("Service not requested yet");
+		return 1;
+	}
 	printf("Service requested\n");
 
 	/* ------------------------------------------------------------
@@ -153,7 +156,16 @@ int main(int argc, char *argv[]) {
 	 *  - Validate that it is exactly 32 bytes
 	 *  - Abort on failure
 	 */
-
+	unsigned char* key_tgs_app = NULL;
+	size_t key_tgs_app_len = 0;
+	if(read_hex_file_bytes(key_tgs_app_path, &key_tgs_app, &key_tgs_app_len) == 0){
+		printf("Could not read 'Key_TGS_App.txt.\n");
+		return 1;
+	}
+	if(key_tgs_app_len != 32){
+		printf("Service-TGS key not 32 bytes.\n");
+		return 1;
+	}
 	/* ------------------------------------------------------------
 	 * STEP 2: Decrypt Ticket_App
 	 *
@@ -175,7 +187,15 @@ int main(int argc, char *argv[]) {
 	 *  - AES-decrypt using Key_TGS_App
 	 *  - Treat the result as ASCII data
 	 */
-
+	unsigned char* ticket_app = read_line(app_req_path, 1);
+	unsigned char* ticket_app_plaintext = NULL;
+	size_t ticket_app_plaintext_len = 0;
+	if(aes256_decrypt_hex_string_to_bytes(key_tgs_app, ticket_app, &ticket_app_plaintext, &ticket_app_plaintext_len) == 0){
+		printf("Failed to decrypt Ticket App.\n");
+		free(key_tgs_app);
+		return 1;
+	}
+	free(key_tgs_app);
 	/* ------------------------------------------------------------
 	 * STEP 3: Parse client identity and Key_Client_App
 	 *
@@ -192,7 +212,28 @@ int main(int argc, char *argv[]) {
 	 *  - Convert Key_Client_App hex → raw bytes
 	 *  - Abort on malformed data
 	 */
+	unsigned char* clientID1 = malloc(ticket_app_plaintext_len - 64);
+	unsigned char* key_client_app_hex = malloc(64 + 1);
+	memcpy(clientID1, ticket_app_plaintext, ticket_app_plaintext_len - 64);
+	memcpy(key_client_app_hex, ticket_app_plaintext + (ticket_app_plaintext_len - 64), 64);
+	key_client_app_hex[64] = '\0';
+	
+	unsigned char* key_client_app = NULL;
+	size_t key_client_app_len = 0;
+	if(hex_to_bytes(key_client_app_hex, &key_client_app, &key_client_app_len) == 0){
+		printf("Client-app key byte conversion failed.\n");
+		free(clientID1);
+		free(key_client_app_hex);
+		return 1;
+	}
 
+	free(key_client_app_hex);
+
+	if(key_client_app_len != 32){
+		printf("Client-app key size incorrect.\n");
+		free(clientID1);
+		return 1;
+	}
 	/* ------------------------------------------------------------
 	 * STEP 4: Decrypt and verify Auth_Client_App
 	 *
@@ -208,7 +249,17 @@ int main(int argc, char *argv[]) {
 	 *  - AES-decrypt using Key_Client_App
 	 *  - Interpret plaintext as clientID_2
 	 */
+	unsigned char* Auth_Client_App_ciphertext = read_line(app_req_path, 2);	// Cor
+	unsigned char* clientID2 = NULL;
+	size_t clientID2_len = 0;
+	if(aes256_decrypt_hex_string_to_bytes(key_client_app, Auth_Client_App_ciphertext, &clientID2, &clientID2_len) == 0){
+		printf("Client authentication decryption failed.\n");
+		free(clientID1);
+		free(Auth_Client_App_ciphertext);
+		return 1;
+	}
 
+	free(Auth_Client_App_ciphertext);
 	/* ------------------------------------------------------------
 	 * STEP 5: Validate client identity
 	 *
@@ -227,7 +278,15 @@ int main(int argc, char *argv[]) {
 	 *  - Compare the two client ID strings
 	 *  - Treat mismatch as authentication failure
 	 */
-
+	if(memcmp(clientID1, clientID2, clientID2_len) != 0){
+		printf("Could not validate client identity. Client request rejected.\n");
+		free(clientID1);
+		free(clientID2);
+		return 1;
+	}
+	printf("Client request accepted.\n");
+	free(clientID1);
+	free(clientID2);
 	/* ------------------------------------------------------------
 	 * STEP 6: Write APP_REP.txt
 	 *
@@ -245,6 +304,12 @@ int main(int argc, char *argv[]) {
 	 *  - Write exactly:
 	 *        OK\n
 	 */
-
+	FILE* f = fopen("APP_REP.txt", "w");
+	if(!f){
+		printf("Writing to 'APP_REP.txt' failed.\n");
+		return 1;
+	}
+	fprintf(f, "OK\n");
+	fclose(f);
 	return EXIT_SUCCESS;
 }
