@@ -235,8 +235,8 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "ECDH failed\n");
 		return EXIT_FAILURE;
 	}
-	fprintf(stderr, "ECDH OK, secret_len=%zu\n", shared_secret_len);
-	fflush(stderr);
+	// fprintf(stderr, "ECDH OK, secret_len=%zu\n", shared_secret_len);
+	// fflush(stderr);
 	write_hex_file("shared_secret.txt", shared_secret, shared_secret_len);
 
 	/* ------------------------------------------------------------
@@ -332,7 +332,7 @@ int main(int argc, char *argv[])
 	char* tgt = malloc(tgt_len);
 	unsigned char *key_client_tgs_hex = NULL;
 	size_t key_client_tgs_hex_len = 0;
-	key_client_tgs_hex = bytes_to_hex(key_client_tgs, 32);
+	key_client_tgs_hex = bytes_to_hex(key_client_tgs_ptr, 32);
 	if(key_client_tgs_hex == NULL) {
 		fprintf(stderr, "Error converting Key_Client_TGS to hex\n");
 		free(key_client_as_tgs);
@@ -357,8 +357,8 @@ int main(int argc, char *argv[])
 	aes256_encrypt_bytes_to_hex_string(key_client_as_tgs, (unsigned char *)tgt, tgt_len, &tgt_hex);
 	int tgt_hex_len = strlen(tgt_hex);
 
-	print_hex("Key_Client_AS_TGS", key_client_as_tgs, key_client_as_tgs_len);
-	printf("key_client_as_tgs_len: %zu\n", key_client_as_tgs_len);
+	// print_hex("Key_Client_AS_TGS", key_client_as_tgs, key_client_as_tgs_len);
+	// printf("key_client_as_tgs_len: %zu\n", key_client_as_tgs_len);
 
 
 	/* ------------------------------------------------------------
@@ -385,13 +385,13 @@ int main(int argc, char *argv[])
 	 *  - Write to AS_REP.txt (single line)
 	 */
 
-	unsigned char* as_rep_plain = malloc(32 + tgt_len);
-	int as_rep_plain_len = 32 + (int)tgt_hex_len;
+	unsigned char* as_rep_plain = malloc(key_client_tgs_len + (size_t)tgt_hex_len);
+	int as_rep_plain_len = (int)(key_client_tgs_len + (size_t)tgt_hex_len);
 	int as_rep_len = 0;
 	unsigned char* as_rep_hex = NULL;
 	
 
-	memcpy(as_rep_plain, key_client_tgs, key_client_tgs_len);
+	memcpy(as_rep_plain, key_client_tgs_ptr, key_client_tgs_len);
 	memcpy(as_rep_plain + key_client_tgs_len, tgt_hex, tgt_hex_len);
 	
 	aes256_encrypt_bytes_to_hex_string(key_client_as, as_rep_plain, as_rep_plain_len, &as_rep_hex);
@@ -410,15 +410,14 @@ int main(int argc, char *argv[])
 	fclose(f);
 	free(as_rep_hex);
 
-	print_hex("Key_Client_AS", key_client_as, 32);
-	printf("key_client_as length: %zu\n", sizeof(key_client_as));
+	// print_hex("Key_Client_AS", key_client_as, 32);
+	// printf("key_client_as length: %zu\n", sizeof(key_client_as));
 
 	free(shared_secret);
 	free(key_client_as_tgs);
 	free(key_client_tgs_hex);
 	free(tgt);
 	free(as_rep_plain);
-	free(as_rep_hex);
 	free(tgt_hex);
 
 	return EXIT_SUCCESS;

@@ -451,7 +451,7 @@ int main(int argc, char *argv[]) {
 
 	unsigned char* ticket_app_hex = read_line("TGS_REP.txt", 1);	// Cor
 
-	if(write_text_lines("APP_REQ.txt", ticket_app_hex, Auth_Client_App_hex, "") == 0){
+	if(write_text_lines("APP_REQ.txt", ticket_app_hex, Auth_Client_App_hex, NULL) == 0){
 		printf("Could not write to APP_REQ.txt.\n");
 		free(ticket_app_hex);
 		return 1;
