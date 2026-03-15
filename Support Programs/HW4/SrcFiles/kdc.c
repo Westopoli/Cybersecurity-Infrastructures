@@ -6,6 +6,8 @@
 #include <openssl/ec.h>
 #include <openssl/rand.h>
 
+static void print_hex(const char *label, const unsigned char *buf, size_t len);
+
 // #include <unistd.h> // For access() if needed
 
 /*
@@ -229,8 +231,12 @@ int main(int argc, char *argv[])
 	unsigned char* shared_secret = NULL;
 	size_t shared_secret_len = 0;
 
-	ecdh_shared_secret_files(as_temp_sk_path, client_temp_pk_path, &shared_secret, &shared_secret_len);
-
+	if (!ecdh_shared_secret_files(as_temp_sk_path, client_temp_pk_path, &shared_secret, &shared_secret_len)) {
+		fprintf(stderr, "ECDH failed\n");
+		return EXIT_FAILURE;
+	}
+	fprintf(stderr, "ECDH OK, secret_len=%zu\n", shared_secret_len);
+	fflush(stderr);
 	write_hex_file("shared_secret.txt", shared_secret, shared_secret_len);
 
 	/* ------------------------------------------------------------
@@ -270,9 +276,11 @@ int main(int argc, char *argv[])
 	 *  - Validate length
 	 *  - Store raw bytes in key_client_tgs
 	 */
-	int* key_client_tgs_len = 0;
+	size_t key_client_tgs_len = 0;
+	unsigned char *key_client_tgs_ptr = key_client_tgs;
 
-	read_hex_file_bytes("Key_Client_TGS.txt", &key_client_tgs, key_client_tgs_len);
+	// just changed this 
+	read_hex_file_bytes("Key_Client_TGS.txt", &key_client_tgs_ptr, &key_client_tgs_len);
 	if(key_client_tgs_len != 32) {
 		fprintf(stderr, "Error: Key_Client_TGS.txt must contain exactly 32 bytes (256 bits).\n");
 		return EXIT_FAILURE;
@@ -304,10 +312,11 @@ int main(int argc, char *argv[])
 	 *  - Hex-encode the ciphertext
 	 */
 
-	int key_client_as_len = 0;
+	size_t key_client_as_tgs_len = 0;
+	unsigned char* key_client_as_tgs = NULL;
 
-	read_hex_file_bytes("Key_AS_TGS.txt", &key_client_as, &key_client_as_len);
-	if(key_client_as_len != 32) {
+	read_hex_file_bytes("Key_AS_TGS.txt", &key_client_as_tgs, &key_client_as_tgs_len);
+	if(key_client_as_tgs_len != 32) {
 		fprintf(stderr, "Error: Key_AS_TGS.txt must contain exactly 32 bytes (256 bits).\n");
 		return EXIT_FAILURE;
 	}
@@ -319,13 +328,37 @@ int main(int argc, char *argv[])
 	// memcpy(tgt + 6, key_client_tgs, 32);
 	// tgt[tgt_len - 1] = '\0';
 
-	size_t tgt_len = 6 + 32;
+	size_t tgt_len = 70;
 	char* tgt = malloc(tgt_len);
+	unsigned char *key_client_tgs_hex = NULL;
+	size_t key_client_tgs_hex_len = 0;
+	key_client_tgs_hex = bytes_to_hex(key_client_tgs, 32);
+	if(key_client_tgs_hex == NULL) {
+		fprintf(stderr, "Error converting Key_Client_TGS to hex\n");
+		free(key_client_as_tgs);
+		free(key_client_tgs_hex);
+		free(tgt);
+		return EXIT_FAILURE;
+	}
+	key_client_tgs_hex_len = strlen((char *)key_client_tgs_hex);
+
+	if(key_client_tgs_hex_len != 64) {
+		fprintf(stderr, "Error: Key_Client_TGS hex string must be exactly 64 characters (32 bytes).\n");
+		free(key_client_as_tgs);
+		free(key_client_tgs_hex);
+		free(tgt);
+		return EXIT_FAILURE;
+	}
+
 	memcpy(tgt, "Client", 6);
-	memcpy(tgt + 6, key_client_tgs, 32);
+	memcpy(tgt + 6, key_client_tgs_hex, key_client_tgs_hex_len);
 
 	char* tgt_hex = NULL;
-	aes256_encrypt_bytes_to_hex_string(key_client_as, (unsigned char *)tgt, tgt_len, &tgt_hex);
+	aes256_encrypt_bytes_to_hex_string(key_client_as_tgs, (unsigned char *)tgt, tgt_len, &tgt_hex);
+	int tgt_hex_len = strlen(tgt_hex);
+
+	print_hex("Key_Client_AS_TGS", key_client_as_tgs, key_client_as_tgs_len);
+	printf("key_client_as_tgs_len: %zu\n", key_client_as_tgs_len);
 
 
 	/* ------------------------------------------------------------
@@ -353,17 +386,48 @@ int main(int argc, char *argv[])
 	 */
 
 	unsigned char* as_rep_plain = malloc(32 + tgt_len);
-	int as_rep_plain_len = 32 + (int)tgt_len;
+	int as_rep_plain_len = 32 + (int)tgt_hex_len;
 	int as_rep_len = 0;
 	unsigned char* as_rep_hex = NULL;
 	
 
-	memcpy(as_rep_plain, key_client_as, 32);
-	memcpy(as_rep_plain + 32, tgt_hex, tgt_len);
+	memcpy(as_rep_plain, key_client_tgs, key_client_tgs_len);
+	memcpy(as_rep_plain + key_client_tgs_len, tgt_hex, tgt_hex_len);
 	
 	aes256_encrypt_bytes_to_hex_string(key_client_as, as_rep_plain, as_rep_plain_len, &as_rep_hex);
 	// confrirmed that as_rep_hex will have a null terminator so we can use strlen safetly
-	write_hex_file("AS_REP.txt", as_rep_hex, strlen((char *)as_rep_hex));
+	// write_hex_file("AS_REP.txt", as_rep_hex, strlen((char *)as_rep_hex));
+	// figured out ^ this was double encoding
+
+	if(!as_rep_plain) 
+		return 0;
+	FILE *f = fopen("AS_REP.txt", "w");
+	if (!f) {
+		free(as_rep_plain);
+		return 0;
+	}
+	fprintf(f, "%s\n", as_rep_hex);
+	fclose(f);
+	free(as_rep_hex);
+
+	print_hex("Key_Client_AS", key_client_as, 32);
+	printf("key_client_as length: %zu\n", sizeof(key_client_as));
+
+	free(shared_secret);
+	free(key_client_as_tgs);
+	free(key_client_tgs_hex);
+	free(tgt);
+	free(as_rep_plain);
+	free(as_rep_hex);
+	free(tgt_hex);
 
 	return EXIT_SUCCESS;
+}
+
+static void print_hex(const char *label, const unsigned char *buf, size_t len) {
+    fprintf(stderr, "%s (%zu bytes): ", label, len);
+    for (size_t i = 0; i < len; i++) {
+        fprintf(stderr, "%02x", buf[i]);
+    }
+    fprintf(stderr, "\n");
 }
