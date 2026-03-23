@@ -423,10 +423,10 @@ int main(int argc, char *argv[])
 	return EXIT_SUCCESS;
 }
 
-static void print_hex(const char *label, const unsigned char *buf, size_t len) {
-    fprintf(stderr, "%s (%zu bytes): ", label, len);
-    for (size_t i = 0; i < len; i++) {
-        fprintf(stderr, "%02x", buf[i]);
-    }
-    fprintf(stderr, "\n");
-}
+// static void print_hex(const char *label, const unsigned char *buf, size_t len) {
+//     fprintf(stderr, "%s (%zu bytes): ", label, len);
+//     for (size_t i = 0; i < len; i++) {
+//         fprintf(stderr, "%02x", buf[i]);
+//     }
+//     fprintf(stderr, "\n");
+// }
