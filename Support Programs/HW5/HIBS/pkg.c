@@ -72,6 +72,12 @@ int main(int argc, char **argv)
 	// TODO: Call init_group(&group, &q)
 	// TODO: If it fails, print error and exit
 
+	if(init_group(&group, &q) == 0) {
+		fprintf(stderr, "initializing elliptic curve group failed\n");
+		goto cleanup;
+	}
+
+
 	/* =====================================================
 	 * 2. Obtain generator P
 	 * =====================================================
@@ -86,6 +92,12 @@ int main(int argc, char **argv)
 	 */
 
 	// TODO: Set P = EC_GROUP_get0_generator(group)
+
+	P = EC_GROUP_get0_generator(group);
+	if(P == NULL) {
+		fprintf(stderr, "Point generator failed\n");
+		goto cleanup;
+	}
 
 	/* =====================================================
 	 * 3. Command-line argument validation
@@ -124,6 +136,12 @@ int main(int argc, char **argv)
 
 	// TODO: Allocate ctx using BN_CTX_new()
 
+	ctx = BN_CTX_new();
+	if(ctx == NULL) {
+		fprintf(stderr, "BN context failed to allocate\n");
+		goto cleanup;
+	}
+
 	/* =====================================================
 	 * 5. Load master secret key x
 	 * =====================================================
@@ -144,6 +162,11 @@ int main(int argc, char **argv)
 	// TODO: Read master secret msk from argv[1]
 	// TODO: If read fails, print error and exit
 
+	if(read_bn_hex(argv[1], &msk) == 0) {
+		fprintf(stderr, "Loading master secret key failed\n");
+		goto cleanup;
+	}
+
 	/* =====================================================
 	 * 6. Compute master public key mpk
 	 * =====================================================
@@ -162,6 +185,16 @@ int main(int argc, char **argv)
 
 	// TODO: Allocate mpk using EC_POINT_new(group)
 	// TODO: Compute mpk = msk * P using EC_POINT_mul
+
+	mpk = EC_POINT_new(group);
+	if(mpk == NULL) {
+		fprintf(stderr, "Master public key allocation failed\n");
+		goto cleanup;
+	}
+	if(EC_POINT_mul(group, mpk, NULL, P, msk, ctx) == 0) {
+		fprintf(stderr, "Eliiptic curve point multiplication failed\n");
+		goto cleanup;
+	}
 
 	/* =====================================================
 	 * 7. Write master public key to disk
@@ -182,6 +215,10 @@ int main(int argc, char **argv)
 
 	// TODO: Write mpk to "mpk.txt"
 
+	if(write_point_hex("mpk.txt", group, mpk) == 0) {
+		fprintf(stderr, "Writing master PK to disk failed\n");
+		goto cleanup;
+	}
 	printf("[PKG] Setup complete. Wrote mpk.txt.\n");
 	ret = EXIT_SUCCESS;
 
@@ -203,6 +240,11 @@ cleanup:
 	// TODO: Free ctx
 	// TODO: Free group
 	// TODO: Free q
+	EC_POINT_free(mpk);
+	BN_free(msk);
+	BN_CTX_free(ctx);
+	EC_GROUP_free(group);
+	BN_free(q);
 
 	return ret;
 }
