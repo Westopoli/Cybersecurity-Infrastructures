@@ -252,7 +252,7 @@ int main(int argc, char **argv)
 	}
 
 	// Write E_b to file
-	if(!write_point_hex("alice_ephemeral_Eb.txt", group, E_b)){
+	if(!write_point_hex("bob_ephemeral_Eb.txt", group, E_b)){
 		fprintf(stderr, "Could not write E_b to file.\n");
 		goto cleanup;
 	}
@@ -273,7 +273,7 @@ int main(int argc, char **argv)
      */
 
     // TODO: Attempt to read alice_ephemeral_Ea.txt into E_a
-    if(!read_point_hex("alice_ephemeral.Ea.txt", group, &E_a)){
+    if(!read_point_hex("alice_ephemeral_Ea.txt", group, &E_a)){
 		fprintf(stderr, "E_a file not found or could not be read.\n");
 		ret = EXIT_SUCCESS;
 		goto cleanup;
@@ -301,9 +301,10 @@ int main(int argc, char **argv)
 	}
 
 	// Load buffer with ID_A || U_bytes
-	memcpy(buf, ID_A, sizeof(ID_A));
-	buf_len = sizeof(ID_A);
-	memcpy(buf + sizeof(ID_A), U_bytes, U_len);
+    buf = malloc(strlen(ID_A) + U_len);
+	memcpy(buf, ID_A, strlen(ID_A));
+	buf_len = strlen(ID_A);
+	memcpy(buf + strlen(ID_A), U_bytes, U_len);
 	buf_len += U_len;
 
 	// Compute h_A
@@ -382,7 +383,7 @@ int main(int argc, char **argv)
 	}
 
 	// K_ab  = temp2 + temp1
-	if(!EC_POINT_add(group, K_ab, temp1, temp1, ctx)){
+	if(!EC_POINT_add(group, K_ab, temp1, temp2, ctx)){
 		fprintf(stderr, "Error in K_ab calculation.\n");
 		goto cleanup;
 	}
@@ -392,6 +393,7 @@ int main(int argc, char **argv)
      *
      * OUTPUT FILE:
      *   bob_shared_key_Kab.txt
+     *     
      *
      * FUNCTION:
      *   write_point_hex
@@ -419,11 +421,6 @@ int main(int argc, char **argv)
 
 cleanup:
     // TODO: Free all allocated memory
-    EC_GROUP_free(group);
-	BN_free(q);
-	EC_POINT_free(P);
-	BN_CTX_free(ctx);
-
 	BN_free(x_b);
 	BN_free(p_b);
 	
@@ -442,5 +439,9 @@ cleanup:
 
 	free(U_bytes); 
 	free(buf);
+
+    EC_GROUP_free(group);
+	BN_free(q);
+	BN_CTX_free(ctx);
     return ret;
 }

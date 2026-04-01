@@ -344,9 +344,10 @@ int main(int argc, char **argv)
 	}
 
 	// Load buffer with ID_A || U_bytes
-	memcpy(buf, ID_A, sizeof(ID_A));
-	buf_len = sizeof(ID_A);
-	memcpy(buf + sizeof(ID_A), U_bytes, U_len);
+	buf = malloc(strlen(ID_A) + U_len);
+	memcpy(buf, ID_A, strlen(ID_A));
+	buf_len = strlen(ID_A);
+	memcpy(buf + strlen(ID_A), U_bytes, U_len);
 	buf_len += U_len;
 
 	// Compute h_a
@@ -364,7 +365,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "x_a computation failed.\n");
 		goto cleanup;
 	}
-	if(!BN_mod_mul(x_a, x_a, d, q, ctx)){
+	if(!BN_mod_add(x_a, x_a, d, q, ctx)){
 		fprintf(stderr, "x_a computation failed.\n");
 		goto cleanup;
 	}
@@ -378,6 +379,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Failed to write to 'alice_public_Ua.txt'.\n");
 		goto cleanup;
 	}
+	free(buf);
 	/* =====================================================
 	 * 11. Bob offline key generation
 	 * =====================================================
@@ -409,9 +411,10 @@ int main(int argc, char **argv)
 	}
 
 	// Load buffer with ID_B || U_bytes
-	memcpy(buf, ID_B, sizeof(ID_B));
-	buf_len = sizeof(ID_B);
-	memcpy(buf + sizeof(ID_B), U_bytes, U_len);
+	buf = malloc(strlen(ID_B) + U_len);
+	memcpy(buf, ID_B, strlen(ID_B));
+	buf_len = strlen(ID_B);
+	memcpy(buf + strlen(ID_B), U_bytes, U_len);
 	buf_len += U_len;
 
 	// Compute h_b
@@ -429,7 +432,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "x_b computation failed.\n");
 		goto cleanup;
 	}
-	if(!BN_mod_mul(x_b, x_b, d, q, ctx)){
+	if(!BN_mod_add(x_b, x_b, d, q, ctx)){
 		fprintf(stderr, "x_b computation failed.\n");
 		goto cleanup;
 	}
@@ -439,7 +442,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Failed to write to 'bob_private_xb.txt'.\n");
 		goto cleanup;
 	}
-	if(!write_point_hex("bob_public_Ub.txt", group, U_a)){
+	if(!write_point_hex("bob_public_Ub.txt", group, U_b)){
 		fprintf(stderr, "Failed to write to 'bob_public_Ub.txt'.\n");
 		goto cleanup;
 	}
@@ -463,11 +466,6 @@ int main(int argc, char **argv)
 
 cleanup:
 	// TODO: Free all allocated resources
-	EC_GROUP_free(group);
-	BN_free(q);
-	EC_POINT_free(P);
-	BN_CTX_free(ctx);
-
 	BN_free(d);            
 	EC_POINT_free(D);
 
@@ -484,6 +482,10 @@ cleanup:
 
 	free(U_bytes);
 	free(buf); 
+
+	EC_GROUP_free(group);
+	BN_free(q);
+	BN_CTX_free(ctx);
 	
 	return ret;
 }

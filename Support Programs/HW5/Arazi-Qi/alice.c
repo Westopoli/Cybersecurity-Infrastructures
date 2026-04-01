@@ -273,7 +273,7 @@ int main(int argc, char **argv)
 	 */
 
 	// TODO: Attempt to read bob_ephemeral_Eb.txt into E_b
-	if(!read_point_hex("bob_ephemeral.Eb.txt", group, &E_b)){
+	if(!read_point_hex("bob_ephemeral_Eb.txt", group, &E_b)){
 		fprintf(stderr, "E_b file not found or could not be read.\n");
 		ret = EXIT_SUCCESS;
 		goto cleanup;
@@ -301,9 +301,10 @@ int main(int argc, char **argv)
 	}
 
 	// Load buffer with ID_B || U_bytes
-	memcpy(buf, ID_B, sizeof(ID_B));
-	buf_len = sizeof(ID_B);
-	memcpy(buf + sizeof(ID_B), U_bytes, U_len);
+	buf = malloc(strlen(ID_B) + U_len);
+	memcpy(buf, ID_B, strlen(ID_B));
+	buf_len = strlen(ID_B);
+	memcpy(buf + strlen(ID_B), U_bytes, U_len);
 	buf_len += U_len;
 
 	// Compute h_B
@@ -383,7 +384,7 @@ int main(int argc, char **argv)
 	}
 
 	// K_ab  = temp2 + temp1
-	if(!EC_POINT_add(group, K_ab, temp1, temp1, ctx)){
+	if(!EC_POINT_add(group, K_ab, temp1, temp2, ctx)){
 		fprintf(stderr, "Error in K_ab calculation.\n");
 		goto cleanup;
 	}
@@ -419,11 +420,6 @@ int main(int argc, char **argv)
 	 */
 
 cleanup:
-	EC_GROUP_free(group);
-	BN_free(q);
-	EC_POINT_free(P);
-	BN_CTX_free(ctx);
-
 	BN_free(x_a);
 	BN_free(p_a);
 	
@@ -442,5 +438,10 @@ cleanup:
 
 	free(U_bytes); 
 	free(buf);
+
+	EC_GROUP_free(group);
+	BN_free(q);
+	BN_CTX_free(ctx);
+
 	return ret;
 }
