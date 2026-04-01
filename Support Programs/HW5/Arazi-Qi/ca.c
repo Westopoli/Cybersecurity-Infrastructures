@@ -144,13 +144,13 @@ int main(int argc, char **argv)
 
 	d = BN_new();
 	if(d == NULL){
-		fprintf(stderr, "BIGNUM allocation failed.\n");
+		fprintf(stderr, "d allocation failed.\n");
 		goto cleanup;
 	}
 
 	D = EC_POINT_new(group);
 	if(D == NULL){
-		fprintf(stderr, "EC_POINT allocation failed.\n");
+		fprintf(stderr, "D allocation failed.\n");
 		goto cleanup;
 	}
 	
@@ -230,43 +230,43 @@ int main(int argc, char **argv)
 	 */
 
 	// TODO: Allocate per-user BIGNUMs and EC_POINTs
-	b_a = EC_POINT_new();
+	b_a = BN_new();
 	if(b_a == NULL){
 		fprintf(stderr, "b_a allocation failed.\n");
 		goto cleanup;
 	}
 
-	b_b = EC_POINT_new();
+	b_b = BN_new();
 	if(b_b == NULL){
 		fprintf(stderr, "b_b allocation failed.\n");
 		goto cleanup;
 	}
 
-	U_a = EC_POINT_new();
+	U_a = EC_POINT_new(group);
 	if(U_a == NULL){
 		fprintf(stderr, "U_a allocation failed.\n");
 		goto cleanup;
 	}
 
-	U_b = EC_POINT_new();
+	U_b = EC_POINT_new(group);
 	if(U_b == NULL){
 		fprintf(stderr, "U_b allocation failed.\n");
 		goto cleanup;
 	}
 
-	x_a = EC_POINT_new();
+	x_a = BN_new();
 	if(x_a == NULL){
 		fprintf(stderr, "x_a allocation failed.\n");
 		goto cleanup;
 	}
 
-	x_b = EC_POINT_new();
+	x_b = BN_new();
 	if(x_b == NULL){
 		fprintf(stderr, "x_b allocation failed.\n");
 		goto cleanup;
 	}
 
-	tmp = EC_POINT_new();
+	tmp = BN_new();
 	if(tmp == NULL){
 		fprintf(stderr, "temp allocation failed.\n");
 		goto cleanup;
@@ -287,12 +287,12 @@ int main(int argc, char **argv)
 
 	// TODO: Read b_a from argv[2]
 	// TODO: Read b_b from argv[3]
-	if(!read_bn_hex(argv[2], b_a)){
+	if(!read_bn_hex(argv[2], &b_a)){
 		fprintf(stderr, "Could not load b_a from file.\n");
 		goto cleanup;
 	}
 
-	if(!read_bn_hex(argv[3], b_b)){
+	if(!read_bn_hex(argv[3], &b_b)){
 		fprintf(stderr, "Could not load b_b from file.\n");
 		goto cleanup;
 	}
