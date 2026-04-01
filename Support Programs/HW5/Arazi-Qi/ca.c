@@ -99,7 +99,10 @@ int main(int argc, char **argv)
 
 	// TODO:
 	// if (!init_group(&group, &q)) { print error and goto cleanup; }
-
+	if(!init_group(&group, &q)){
+		fprintf(stderr, "EC_GROUP initialization failed.\n");
+		goto cleanup;
+	}
 	/* =====================================================
 	 * 3. Obtain generator P
 	 * =====================================================
@@ -115,7 +118,11 @@ int main(int argc, char **argv)
 
 	// TODO:
 	// P = EC_GROUP_get0_generator(group);
-
+	P = EC_GROUP_get0_generator(group);
+	if(P == NULL){
+		fprintf(stderr, "Could not obtain generator P.\n");
+		goto cleanup;
+	}
 	/* =====================================================
 	 * 4. Allocate context and master key objects
 	 * =====================================================
@@ -129,7 +136,24 @@ int main(int argc, char **argv)
 	 */
 
 	// TODO: Allocate ctx, d, and D
+	ctx = BN_CTX_new();
+	if(ctx == NULL){
+		fprintf(stderr, "BN_CTX allocation failed.\n");
+		goto cleanup;
+	}
 
+	d = BN_new();
+	if(d == NULL){
+		fprintf(stderr, "BIGNUM allocation failed.\n");
+		goto cleanup;
+	}
+
+	D = EC_POINT_new(group);
+	if(D == NULL){
+		fprintf(stderr, "EC_POINT allocation failed.\n");
+		goto cleanup;
+	}
+	
 	/* =====================================================
 	 * 5. Load CA master secret d
 	 * =====================================================
@@ -146,7 +170,10 @@ int main(int argc, char **argv)
 	 */
 
 	// TODO: Read d from argv[1]
-
+	if(!read_bn_hex(argv[1], &d)){
+		fprintf(stderr, "Could not read master secret from file.\n");
+		goto cleanup;
+	}
 	/* =====================================================
 	 * 6. Compute CA master public key D
 	 * =====================================================
@@ -161,7 +188,10 @@ int main(int argc, char **argv)
 	 */
 
 	// TODO: Compute D = d * P
-
+	if(!EC_POINT_mul(group, D, NULL, P, d, ctx)){
+		fprintf(stderr, "Could not compute master public key.\n");
+		goto cleanup;
+	}
 	/* =====================================================
 	 * 7. Write CA master keys to disk
 	 * =====================================================
@@ -179,7 +209,15 @@ int main(int argc, char **argv)
 
 	// TODO: Write ca_master_secret_d.txt
 	// TODO: Write ca_master_public_D.txt
+	if(!write_bn_hex("ca_master_secret_d.txt", d)){
+		fprintf(stderr, "Failed to write master secret to file.\n");
+		goto cleanup;
+	}
 
+	if(!write_point_hex("ca_master_public_D.txt", group, D)){
+		fprintf(stderr, "Failed to write master public to file.\n");
+		goto cleanup;
+	}
 	/* =====================================================
 	 * 8. Allocate per-user objects
 	 * =====================================================
@@ -192,7 +230,47 @@ int main(int argc, char **argv)
 	 */
 
 	// TODO: Allocate per-user BIGNUMs and EC_POINTs
+	b_a = EC_POINT_new();
+	if(b_a == NULL){
+		fprintf(stderr, "b_a allocation failed.\n");
+		goto cleanup;
+	}
 
+	b_b = EC_POINT_new();
+	if(b_b == NULL){
+		fprintf(stderr, "b_b allocation failed.\n");
+		goto cleanup;
+	}
+
+	U_a = EC_POINT_new();
+	if(U_a == NULL){
+		fprintf(stderr, "U_a allocation failed.\n");
+		goto cleanup;
+	}
+
+	U_b = EC_POINT_new();
+	if(U_b == NULL){
+		fprintf(stderr, "U_b allocation failed.\n");
+		goto cleanup;
+	}
+
+	x_a = EC_POINT_new();
+	if(x_a == NULL){
+		fprintf(stderr, "x_a allocation failed.\n");
+		goto cleanup;
+	}
+
+	x_b = EC_POINT_new();
+	if(x_b == NULL){
+		fprintf(stderr, "x_b allocation failed.\n");
+		goto cleanup;
+	}
+
+	tmp = EC_POINT_new();
+	if(tmp == NULL){
+		fprintf(stderr, "temp allocation failed.\n");
+		goto cleanup;
+	}
 	/* =====================================================
 	 * 9. Load per-user random scalars
 	 * =====================================================
@@ -209,7 +287,15 @@ int main(int argc, char **argv)
 
 	// TODO: Read b_a from argv[2]
 	// TODO: Read b_b from argv[3]
+	if(!read_bn_hex(argv[2], b_a)){
+		fprintf(stderr, "Could not load b_a from file.\n");
+		goto cleanup;
+	}
 
+	if(!read_bn_hex(argv[3], b_b)){
+		fprintf(stderr, "Could not load b_b from file.\n");
+		goto cleanup;
+	}
 	/* =====================================================
 	 * 10. Alice offline key generation
 	 * =====================================================
@@ -244,7 +330,54 @@ int main(int argc, char **argv)
 	// TODO: Compute x_a
 	// TODO: Write alice_private_xa.txt
 	// TODO: Write alice_public_Ua.txt
+	
+	// Compute U_a 
+	if(!EC_POINT_mul(group, U_a, NULL, P, b_a, ctx)){
+		fprintf(stderr, "U_a computation failed.\n");
+		goto cleanup;
+	}
+	
+	// Serialize U_a to U_bytes
+	if(!point_to_bytes(group, U_a, &U_bytes, &U_len)){
+		fprintf(stderr, "U_a serialization failed.\n");
+		goto cleanup;
+	}
 
+	// Load buffer with ID_A || U_bytes
+	memcpy(buf, ID_A, sizeof(ID_A));
+	buf_len = sizeof(ID_A);
+	memcpy(buf + sizeof(ID_A), U_bytes, U_len);
+	buf_len += U_len;
+
+	// Compute h_a
+	if(!sha256_to_scalar(buf, buf_len, q, &h_a)){
+		fprintf(stderr, "Failed to compute h_a.\n");
+		goto cleanup;
+	}
+
+	// Compute x_a = (h_a * b_a + d) mod q
+	// 		1. x_a = (h_a * b_a) mod q
+	//		2. x_a = (x_a) + d) mod q
+	// 		BN_mod_mul(r, a, b, m, ctx)...r = ab mod m
+	// 		BN_mod_add(r, a, b, m, ctx)...r = a+b mod m
+	if(!BN_mod_mul(x_a, h_a, b_a, q, ctx)){
+		fprintf(stderr, "x_a computation failed.\n");
+		goto cleanup;
+	}
+	if(!BN_mod_mul(x_a, x_a, d, q, ctx)){
+		fprintf(stderr, "x_a computation failed.\n");
+		goto cleanup;
+	}
+
+	// Write U_a and x_a to file
+	if(!write_bn_hex("alice_private_xa.txt", x_a)){
+		fprintf(stderr, "Failed to write to 'alice_private_xa.txt'.\n");
+		goto cleanup;
+	}
+	if(!write_point_hex("alice_public_Ua.txt", group, U_a)){
+		fprintf(stderr, "Failed to write to 'alice_public_Ua.txt'.\n");
+		goto cleanup;
+	}
 	/* =====================================================
 	 * 11. Bob offline key generation
 	 * =====================================================
@@ -262,6 +395,54 @@ int main(int argc, char **argv)
 	 */
 
 	// TODO: Repeat steps for Bob
+
+	// Compute U_b 
+	if(!EC_POINT_mul(group, U_b, NULL, P, b_b, ctx)){
+		fprintf(stderr, "U_b computation failed.\n");
+		goto cleanup;
+	}
+	
+	// Serialize U_b to U_bytes
+	if(!point_to_bytes(group, U_b, &U_bytes, &U_len)){
+		fprintf(stderr, "U_b serialization failed.\n");
+		goto cleanup;
+	}
+
+	// Load buffer with ID_B || U_bytes
+	memcpy(buf, ID_B, sizeof(ID_B));
+	buf_len = sizeof(ID_B);
+	memcpy(buf + sizeof(ID_B), U_bytes, U_len);
+	buf_len += U_len;
+
+	// Compute h_b
+	if(!sha256_to_scalar(buf, buf_len, q, &h_b)){
+		fprintf(stderr, "Failed to compute h_b.\n");
+		goto cleanup;
+	}
+
+	// Compute x_b = (h_b * b_b + d) mod q
+	// 		1. x_b = (h_b * b_b) mod q
+	//		2. x_b = (x_b) + d) mod q
+	// 		BN_mod_mul(r, a, b, m, ctx)...r = ab mod m
+	// 		BN_mod_add(r, a, b, m, ctx)...r = a+b mod m
+	if(!BN_mod_mul(x_b, h_b, b_b, q, ctx)){
+		fprintf(stderr, "x_b computation failed.\n");
+		goto cleanup;
+	}
+	if(!BN_mod_mul(x_b, x_b, d, q, ctx)){
+		fprintf(stderr, "x_b computation failed.\n");
+		goto cleanup;
+	}
+
+	// Write U_b and x_b to file
+	if(!write_bn_hex("bob_private_xb.txt", x_b)){
+		fprintf(stderr, "Failed to write to 'bob_private_xb.txt'.\n");
+		goto cleanup;
+	}
+	if(!write_point_hex("bob_public_Ub.txt", group, U_a)){
+		fprintf(stderr, "Failed to write to 'bob_public_Ub.txt'.\n");
+		goto cleanup;
+	}
 
 	printf("[CA] Offline keys generated for Alice and Bob.\n");
 	ret = EXIT_SUCCESS;
@@ -282,6 +463,27 @@ int main(int argc, char **argv)
 
 cleanup:
 	// TODO: Free all allocated resources
+	EC_GROUP_free(group);
+	BN_free(q);
+	EC_POINT_free(P);
+	BN_CTX_free(ctx);
 
+	BN_free(d);            
+	EC_POINT_free(D);
+
+	BN_free(b_a);
+	BN_free(b_b);
+	EC_POINT_free(U_a);
+	EC_POINT_free(U_b);
+
+	BN_free(h_a);
+	BN_free(h_b);
+	BN_free(x_a);
+	BN_free(x_b);
+	BN_free(tmp);
+
+	free(U_bytes);
+	free(buf); 
+	
 	return ret;
 }
