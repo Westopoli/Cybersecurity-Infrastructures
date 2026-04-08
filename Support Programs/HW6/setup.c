@@ -1,0 +1,161 @@
+/*
+Description
+*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <openssl/sha.h>
+#include <openssl/evp.h>
+
+#include "RequiredFunctionsTGDH.c"
+
+int Compute_SHA256(const unsigned char *input, int inputlen, unsigned char *hash);
+
+struct Node {
+    unsigned char* secret_key;
+    unsigned char* blinded_key;
+
+    struct Node *parent;
+    struct Node *left;
+    struct Node *right;
+};
+
+
+int main(int argc, char* argv[]){
+    // Arg check
+    if(argc != 7) {
+        printf("Usage: %s <params_g_file> <params_p_file> <setup_seed_0_file> <setup_seed_1_file> <setup_seed_2_file> <setup_seed_3_file>\n", argv[0]);
+        return 1;
+    }
+    
+    /* Read p and g from files */
+    int g = Read_Int_From_File(argv[1]);
+    if(g == -1){
+        printf("Failed to read param g from file.\n");
+        return 1;
+    }
+
+    int p_len = 0;
+    unsigned char* p = Read_File(argv[2], &p_len);
+    if(p == NULL){
+        printf("Failed to read param p from file.\n");
+        return 1;
+    }
+
+    /* Read member seeds and hash to derive secret keys*/
+    int n = 4;
+    unsigned char* buffer;
+    int buffer_len = 0;
+    unsigned char* secret_keys[4] = {0};
+    
+    // Member 0
+    buffer = Read_File(argv[3], &buffer_len);
+    if(buffer == NULL){
+        printf("Failed to read member secret from file.\n");
+        return 1;
+    }
+    secret_keys[0] = malloc(SHA256_DIGEST_LENGTH);
+    if(secret_keys[0] == NULL){
+        printf("Malloc failed.\n");
+        return 1;
+    }
+    Compute_SHA256(buffer, buffer_len, secret_keys[0]);
+    free(buffer);
+
+    // Member 1
+    buffer = Read_File(argv[4], &buffer_len);
+    if(buffer == NULL){
+        printf("Failed to read member secret from file.\n");
+        return 1;
+    }
+    secret_keys[1] = malloc(SHA256_DIGEST_LENGTH);
+    if(secret_keys[1] == NULL){
+        printf("Malloc failed.\n");
+        return 1;
+    }
+    Compute_SHA256(buffer, buffer_len, secret_keys[1]);
+    free(buffer);
+
+    // Member 2
+    buffer = Read_File(argv[5], &buffer_len);
+    if(buffer == NULL){
+        printf("Failed to read member secret from file.\n");
+        return 1;
+    }
+    secret_keys[2] = malloc(SHA256_DIGEST_LENGTH);
+    if(secret_keys[2] == NULL){
+        printf("Malloc failed.\n");
+        return 1;
+    }
+    Compute_SHA256(buffer, buffer_len, secret_keys[2]);
+    free(buffer);
+
+    // Member 3
+    buffer = Read_File(argv[6], &buffer_len);
+    if(buffer == NULL){
+        printf("Failed to read member secret from file.\n");
+        return 1;
+    }
+    secret_keys[3] = malloc(SHA256_DIGEST_LENGTH);
+    if(secret_keys[3] == NULL){
+        printf("Malloc failed.\n");
+        return 1;
+    }
+    Compute_SHA256(buffer, buffer_len, secret_keys[3]);
+    free(buffer);
+
+    /* Build tree */
+    struct Node root = build_TGDH(secret_keys, 0, n - 1, n);
+
+
+    /* Free secret keys*/
+}
+
+// SHA256 hash
+int Compute_SHA256(const unsigned char *input, int inputlen, unsigned char *hash) {
+
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
+    EVP_DigestUpdate(ctx, input, inputlen);
+    EVP_DigestFinal_ex(ctx, hash, NULL);
+    EVP_MD_CTX_free(ctx);
+
+    return 0;
+}
+
+// Build TGDH left-heavy splitting balanced tree
+struct Node build_TGDH(unsigned char** secrets, int start, int end, int n){
+    
+    struct Node *a = malloc(sizeof(struct Node));
+    if(a == NULL){
+        return NULL;
+    }
+
+    // Base case
+    if(n == 1){
+        a->secret_key = secrets[n];
+
+        // Calculate blinded key
+        
+        return a;
+    }
+    
+    struct Node left;
+    struct Node right;
+
+    // If group size odd
+    if(n % 2 != 0){
+        left = build_TGDH(secrets, start, start + n/2, n/2 + 1);
+        right = build_TGDH(secrets, start + n/2 + 1, end, n/2);
+    }
+    // If group size is even
+    else{
+        left = build_TGDH(secrets, start, start + n/2, n/2);
+        right = build_TGDH(secrets, start + n/2, end, n/2);
+    }
+
+    a->left = left;
+    a->right = right;
+
+    return a;
+}
