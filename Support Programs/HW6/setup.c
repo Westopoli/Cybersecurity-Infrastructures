@@ -133,7 +133,7 @@ struct Node build_TGDH(unsigned char** secrets, int start, int end, int n){
 
     // Base case
     if(n == 1){
-        a->secret_key = secrets[n];
+        a->secret_key = secrets[start];
 
         // Calculate blinded key
         
