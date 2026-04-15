@@ -12,6 +12,8 @@ Description
 int Compute_SHA256(const unsigned char *input, int inputlen, unsigned char *hash);
 BIGNUM* get_g(const char *filename);
 BIGNUM* get_p(const char *filename);
+int bytes_to_bn(unsigned char* strings[], BIGNUM* bns[], int n);
+
 
 struct Node {
     unsigned char* secret_key;
@@ -30,6 +32,8 @@ int main(int argc, char* argv[]){
         return 1;
     }
     
+    int i = 0;
+
     /* Read p and g from files */
     BIGNUM *g = get_g(argv[1]);
     if(g == NULL){
@@ -103,11 +107,26 @@ int main(int argc, char* argv[]){
     Compute_SHA256(buffer, buffer_len, secret_keys[3]);
     free(buffer);
 
+    // Member secret keys as BIGNUM
+    BIGNUM* secret_keys_bn[4] = {0};
+    i = bytes_to_bn(secret_keys, secret_keys_bn, n);
+    if(i == 0){
+        printf("Error in converting secret keys from bytes to BIGNUM.\n");
+        return 1;
+    }
+
+    BN_CTX* ctx = BN_CTX_new();
+    // Member blinded keys
+    BIGNUM* blinded_keys[4] = {0};
+
+
+    
+
     /* Build tree */
     struct Node root = build_TGDH(secret_keys, 0, n - 1, n);
 
 
-    /* Free secret keys*/
+    /* Free memory*/
 }
 
 // SHA256 hash
@@ -197,4 +216,24 @@ BIGNUM* get_p(const char *filename){
     return p;
 }
 
-    
+int bytes_to_bn(unsigned char* strings[], BIGNUM* bns[], int n){
+    int i;
+    for(i = 0; i < n; i++){
+        bns[i] = BN_bin2bn(strings[i], SHA256_DIGEST_LENGTH, NULL);
+        if(bns[i] == NULL){
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int secret_to_blind(BIGNUM* secrets[], BIGNUM* blinds[], BIGNUM* g, BIGNUM* p, int n, BN_CTX* ctx){
+    int i;
+    for(i = 0; i < n; i++){
+        blinds[i] = BN_new();
+        if(BN_mod_exp(blinds[i], g, secrets[i], p, ctx) == 0){
+            return 0;
+        } 
+    }
+    return 1;
+}
