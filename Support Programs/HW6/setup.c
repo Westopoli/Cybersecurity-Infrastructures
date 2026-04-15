@@ -10,6 +10,8 @@ Description
 #include "RequiredFunctionsTGDH.c"
 
 int Compute_SHA256(const unsigned char *input, int inputlen, unsigned char *hash);
+BIGNUM* get_g(const char *filename);
+BIGNUM* get_p(const char *filename);
 
 struct Node {
     unsigned char* secret_key;
@@ -29,23 +31,20 @@ int main(int argc, char* argv[]){
     }
     
     /* Read p and g from files */
-    int g = Read_Int_From_File(argv[1]);
-    if(g == -1){
+    BIGNUM *g = get_g(argv[1]);
+    if(g == NULL){
         printf("Failed to read param g from file.\n");
-        return 1;
     }
-
-    int p_len = 0;
-    unsigned char* p = Read_File(argv[2], &p_len);
+    
+    BIGNUM *p = get_p(argv[2]);
     if(p == NULL){
         printf("Failed to read param p from file.\n");
-        return 1;
     }
 
     /* Read member seeds and hash to derive secret keys*/
-    int n = 4;
     unsigned char* buffer;
     int buffer_len = 0;
+    // For this project n = 4
     unsigned char* secret_keys[4] = {0};
     
     // Member 0
@@ -159,3 +158,43 @@ struct Node build_TGDH(unsigned char** secrets, int start, int end, int n){
 
     return a;
 }
+
+BIGNUM* get_g(const char *filename){
+    // Read g from file as int
+    int g_int = Read_Int_From_File(filename);
+    if(g_int == -1){
+        return NULL;
+    }
+    
+    BIGNUM* g = BN_new();
+    if(g == NULL){
+        return NULL;
+    }
+    
+    // Convert g from int to BIGNUM
+    int i = BN_set_word(g, g_int);
+    if(i == 0){
+        return NULL;
+    }
+    return g;
+}
+
+BIGNUM* get_p(const char *filename){
+    // Read p from file as string
+    int p_len = 0;
+    char* p_string = Read_File(filename, &p_len);
+    if(p_string == NULL){
+        return NULL;
+    }
+
+    BIGNUM* p = NULL;
+
+    // Convert p from string to BIGNUM
+    int i = BN_hex2bn(&p, p_string);
+    if(i == 0){
+        return NULL;
+    }
+    return p;
+}
+
+    
