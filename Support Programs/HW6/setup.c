@@ -10,14 +10,15 @@ Description
 #include "RequiredFunctionsTGDH.c"
 
 int Compute_SHA256(const unsigned char *input, int inputlen, unsigned char *hash);
+struct Node build_TGDH(BIGNUM** secrets, BIGNUM** blinds, int start, int end, int n, );
 BIGNUM* get_g(const char *filename);
 BIGNUM* get_p(const char *filename);
 int bytes_to_bn(unsigned char* strings[], BIGNUM* bns[], int n);
 
 
 struct Node {
-    unsigned char* secret_key;
-    unsigned char* blinded_key;
+    BIGNUM* secret_key;
+    BIGNUM* blinded_key;
 
     struct Node *parent;
     struct Node *left;
@@ -28,7 +29,7 @@ struct Node {
 int main(int argc, char* argv[]){
     // Arg check
     if(argc != 7) {
-        printf("Usage: %s <params_g_file> <params_p_file> <setup_seed_0_file> <setup_seed_1_file> <setup_seed_2_file> <setup_seed_3_file>\n", argv[0]);
+        printf("Usage: %s <params_p_file> <params_g_file> <setup_seed_0_file> <setup_seed_1_file> <setup_seed_2_file> <setup_seed_3_file>\n", argv[0]);
         return 1;
     }
     
@@ -118,13 +119,16 @@ int main(int argc, char* argv[]){
     BN_CTX* ctx = BN_CTX_new();
     // Member blinded keys
     BIGNUM* blinded_keys[4] = {0};
-
-
-    
+    i = secret_to_blind(secret_keys_bn, blinded_keys, g, p, n, ctx);
+    if(i == 0){
+        printf("Error in calculating blind keys.\n");
+        return 1;
+    }
 
     /* Build tree */
-    struct Node root = build_TGDH(secret_keys, 0, n - 1, n);
+    struct Node root = build_TGDH(secret_keys_bn, blinded_keys, 0, n - 1, n);
 
+    
 
     /* Free memory*/
 }
@@ -142,7 +146,7 @@ int Compute_SHA256(const unsigned char *input, int inputlen, unsigned char *hash
 }
 
 // Build TGDH left-heavy splitting balanced tree
-struct Node build_TGDH(unsigned char** secrets, int start, int end, int n){
+struct Node build_TGDH(BIGNUM** secrets, BIGNUM** blinds, int start, int end, int n, ){
     
     struct Node *a = malloc(sizeof(struct Node));
     if(a == NULL){
@@ -152,8 +156,7 @@ struct Node build_TGDH(unsigned char** secrets, int start, int end, int n){
     // Base case
     if(n == 1){
         a->secret_key = secrets[start];
-
-        // Calculate blinded key
+        a->blinded_key = blinds[start]
         
         return a;
     }
@@ -163,13 +166,13 @@ struct Node build_TGDH(unsigned char** secrets, int start, int end, int n){
 
     // If group size odd
     if(n % 2 != 0){
-        left = build_TGDH(secrets, start, start + n/2, n/2 + 1);
-        right = build_TGDH(secrets, start + n/2 + 1, end, n/2);
+        left = build_TGDH(secrets, blinds, start, start + n/2, n/2 + 1);
+        right = build_TGDH(secrets, blinds, start + n/2 + 1, end, n/2);
     }
     // If group size is even
     else{
-        left = build_TGDH(secrets, start, start + n/2, n/2);
-        right = build_TGDH(secrets, start + n/2, end, n/2);
+        left = build_TGDH(secrets, blinds, start, start + n/2, n/2);
+        right = build_TGDH(secrets, blinds, start + n/2, end, n/2);
     }
 
     a->left = left;
@@ -237,3 +240,5 @@ int secret_to_blind(BIGNUM* secrets[], BIGNUM* blinds[], BIGNUM* g, BIGNUM* p, i
     }
     return 1;
 }
+
+
