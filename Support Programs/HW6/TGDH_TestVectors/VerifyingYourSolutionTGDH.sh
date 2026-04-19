@@ -171,9 +171,9 @@ echo ""
 echo "  Results: $PASS passed, $FAIL failed (out of $TOTAL checks)"
 
 # Cleanup binaries and logs, uncomment them if you want to remove after tests
- rm -f Setup Join Leave Merge Refresh
- rm -f setup1.log setup2.log join1.log leave1.log merge1.log refresh1.log
- rm -f compile_setup.log compile_join.log compile_leave.log compile_merge.log compile_refresh.log
+ #rm -f Setup Join Leave Merge Refresh
+ #rm -f setup1.log setup2.log join1.log leave1.log merge1.log refresh1.log
+ #rm -f compile_setup.log compile_join.log compile_leave.log compile_merge.log compile_refresh.log
 
- rm -f blinded_keys_join.txt blinded_keys_leave.txt blinded_keys_merge.txt blinded_keys_refresh.txt blinded_keys_setup.txt
- rm -f group_key_join.txt group_key_leave.txt group_key_merge.txt group_key_refresh.txt group_key_setup.txt
+ #rm -f blinded_keys_join.txt blinded_keys_leave.txt blinded_keys_merge.txt blinded_keys_refresh.txt blinded_keys_setup.txt
+ #rm -f group_key_join.txt group_key_leave.txt group_key_merge.txt group_key_refresh.txt group_key_setup.txt

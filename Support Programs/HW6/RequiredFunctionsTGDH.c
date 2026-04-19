@@ -324,7 +324,7 @@ int write_group_key(struct Node *root, const char *filename, int key_len){
         OPENSSL_free(hex);
         return 0;
     }
-    fprintf(fp, "%s\n", hex);
+    fprintf(fp, "%s", hex);
     fclose(fp);
     OPENSSL_free(hex);
     return 1;
@@ -347,7 +347,7 @@ static void write_internal_nodes_postorder(struct Node *node, FILE *fp, int key_
 //   leaves left-to-right first (from the leaf_blinds byte array)
 //   internal nodes in post-order
 int write_blinded_keys(unsigned char **leaf_blinds, int n, struct Node *root, const char *filename, int key_len){
-    FILE *fp = fopen(filename, "w");
+    FILE *fp = fopen(filename, "wb");
     if(fp == NULL) return 0;
 
     int i;
