@@ -1,3 +1,6 @@
+/*
+Description
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,7 +14,7 @@ int main(int argc, char* argv[]){
     // Arg check
     if(argc != 7) {
         printf("Usage: %s <params_p_file> <params_g_file> <setup_seed_0_file> <setup_seed_1_file> <setup_seed_2_file> <setup_seed_3_file>\n", argv[0]);
-        return 1;
+        goto free_mem;
     }
 
     int n = 4;
@@ -20,12 +23,14 @@ int main(int argc, char* argv[]){
     // Read p and g from files
     BIGNUM *p = get_p(argv[1]);
     if(p == NULL){
-        printf("Failed to read param p from file.\n");
+        printf("Failed to read param pasdf from file.\n");
+        goto free_mem;
     }
 
     BIGNUM *g = get_g(argv[2]);
     if(g == NULL){
         printf("Failed to read param g from file.\n");
+        goto free_mem;
     }
 
     // Read member seeds and hash to derive secret keys
@@ -37,12 +42,12 @@ int main(int argc, char* argv[]){
         buffer = Read_File(argv[3 + i], &buffer_len);
         if(buffer == NULL){
             printf("Failed to read member secret from file.\n");
-            return 1;
+            goto free_mem;
         }
         secret_keys[i] = malloc(SHA256_DIGEST_LENGTH);
         if(secret_keys[i] == NULL){
             printf("Malloc failed.\n");
-            return 1;
+            goto free_mem;
         }
         Compute_SHA256(buffer, buffer_len, secret_keys[i]);
         free(buffer);
@@ -53,7 +58,7 @@ int main(int argc, char* argv[]){
     i = bytes_to_bn(secret_keys, secret_keys_bn, n);
     if(i == 0){
         printf("Error in converting secret keys from bytes to BIGNUM.\n");
-        return 1;
+        goto free_mem;
     }
 
     BN_CTX* ctx = BN_CTX_new();
@@ -62,7 +67,7 @@ int main(int argc, char* argv[]){
     i = secret_to_blind(secret_keys_bn, blinded_keys, g, p, n, ctx);
     if(i == 0){
         printf("Error computing blinded keys.\n");
-        return 1;
+        goto free_mem;
     }
 
     // Convert BIGNUM keys to key_len-padded byte buffers for the tree
@@ -74,14 +79,6 @@ int main(int argc, char* argv[]){
         blinded_bytes[i] = bn_to_bytes(blinded_keys[i], key_len);
     }
 
-    // Convert BIGNUM keys to key_len-padded byte buffers for the tree
-    int key_len = BN_num_bytes(p);
-    unsigned char* secret_bytes[4] = {0};
-    unsigned char* blinded_bytes[4] = {0};
-    for(i = 0; i < n; i++){
-        secret_bytes[i] = bn_to_bytes(secret_keys_bn[i], key_len);
-        blinded_bytes[i] = bn_to_bytes(blinded_keys[i], key_len);
-    }
 
     // Build tree
     struct Node *root = build_tree(secret_bytes, blinded_bytes, 0, n);
