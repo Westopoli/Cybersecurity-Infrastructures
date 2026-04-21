@@ -14,7 +14,6 @@ int secret_to_blind(BIGNUM* secrets[], BIGNUM* blinds[], BIGNUM* g, BIGNUM* p, i
 unsigned char* bn_to_bytes(BIGNUM *bn, int key_len);
 struct Node* build_TGDH(unsigned char** secrets, unsigned char** blinds, int start, int end, int n);
 
-
 struct Node {
     unsigned char* secret_key;
     unsigned char* blinded_key;
