@@ -1,57 +1,283 @@
-**Main Programs**
+# Cybersecurity Infrastructures
 
-**Forward-Secure and Aggregate Digital Forensics Tools - CIA - Military Grade Software**
+> Cryptographic protocols and security infrastructure implemented in **C** with **OpenSSL** — symmetric crypto, identity-based crypto, group key agreement, proof-of-work, aggregate authentication, and forensic logging.
 
-Implementation of a file logging machine (alice.c) and auditor (bob.c) in C. Provides compact, high-level forward security using a hash chained aggregate HMAC algorithm and AES-CTR symmetric encryption. Utilizes Chacha20 PRNG, SHA256, HMAC, and AES CTR mode functions from the OpenSSL library.
+**Contributors:** [Westley Klubeck-Hill](https://github.com/Westopoli) · [Collaborator](#) <!-- LinkedIn TBD -->
 
-The logging machine reads a shared seed from the "SharedSeed$i.txt" file and creates the initial key using the PRNG. Then, for each 1024 byte plaintext message in "Message$i.txt" file, it is encrypted with the key and AES-CTR and the HMAC is computed with the key and resulting ciphertext. The key is updated for each message by via hashing. An aggregate HMAC is formed by concatenating the current HMAC with the previous aggregate HMAC and hashing the result. The keys, ciphertexts, individual HMACs, and aggregate HMAC are converted to hex format and written to the "Keys.txt", "Ciphertexts.txt", "IndividualHMACs.txt", and "AggregatedHMAC.txt" respectively.
+`C` · `OpenSSL` · `Applied Cryptography` · `BIGNUM` · `Elliptic Curves` · `Security Protocols`
 
-The auditor reads the aggregated HMAC from the logging machine in the "AggregatedHMAC.txt" file. It reads the shared seed from the "SharedSeed$i.txt" file and creates the same initial key using the PRNG. Then, for each ciphertext message from the "Ciphertexts.txt" file, it calculates the HMAC, hashing the key for each ciphertext, and rebuilds the aggregated HMAC. If the rebuilt aggregate HMAC matches the one from the logging machine, the logs are verified to not have been tampered with and decryption can begin. Each ciphertext is decrypted with its respective key and the resulting plaintext messages are converted to hex format and written to "Plaintexts.txt".
+---
 
-  - To run, navigate to VerifySolution folder in terminal
-  - Run following command in terminal:
-  ```bash VerifyYourSolution3.sh```
+## Projects
 
-**Client Server Puzzle Program - DDoS Prevention**
+### [Digital Forensics Tools](Main%20Programs/DigitalForensicsTools) — forward-secure aggregate HMAC logger
+Hash-chained aggregate HMAC + AES-CTR encrypted log with offline auditor verification.
+`AES-CTR` `HMAC-SHA256` `ChaCha20 PRNG` `Forward Security`
 
-C implementation of a Client–Server Proof-of-Work protocol designed to mitigate Denial-of-Service (DoS) attacks. The project includes puzzle generation, brute-force solving, and secure verification using SHA256 from OpenSSL.
-  
-The Server reads the challenge from the "Challenge$i.txt" file. The challenge consists of a 32-byte value representing (timestamp || server nonce). The difficulty level k is read from the "Difficulty$i.txt" file as an ASCII integer. The Server writes the Hex format of the challenge to a file named "puzzle challenge.txt" and writes the difficulty k to a file named "puzzle k.txt". This challenge is broadcast to the Client.
+### [Client–Server Puzzle](Main%20Programs/ClientServerPuzzle) — SHA-256 proof-of-work for DoS mitigation
+Hash-based PoW protocol: client brute-forces a nonce with `k` leading zero bits, server verifies in O(1).
+`SHA-256` `Proof-of-Work` `DoS Mitigation`
 
-The Client reads the challenge from the "puzzle challenge.txt" file and the difficulty value k from the "puzzle k.txt" file. The Client performs a brute-force search starting from nonce = 0. For each nonce, the Client constructs (challenge || nonce) and computes the SHA256 hash using OpenSSL. The Client checks whether the first k leading bits of the hash are zero. This process continues until a valid nonce is found. Once a solution is discovered, the Hex format of the nonce (8 bytes) is written to "solution nonce.txt" and the total number of iterations required is written to "solution iterations.txt".
+### [Digital Signature Via Hash](Main%20Programs/DigitalSignatureViaHash) — ChaCha20 stream cipher + hash ACK
+Two-party symmetric channel with SHA-256 acknowledgment over file-IPC.
+`ChaCha20 PRNG` `SHA-256` `XOR Stream Cipher`
 
-The Verify program (Server-side verification) reads the challenge from "puzzle challenge.txt", the difficulty k from "puzzle k.txt", and the nonce from "solution nonce.txt". It reconstructs (challenge || nonce) and recomputes the SHA256 hash using OpenSSL. The program checks whether the hash contains k leading zero bits. If the condition is satisfied, the program writes "ACCEPT" to "verification result.txt" and exits successfully. If the condition fails, the program writes "REJECT" to "verification result.txt" and terminates.
+### [Merkle Hash Tree](Main%20Programs/MerkleHashTree) — SHA-256 binary tree + authentication paths
+Eight-leaf MHT with offline root computation and online authentication-path queries for any leaf index.
+`SHA-256` `Merkle Tree` `Data Integrity`
 
-This implementation demonstrates a hash-based Proof-of-Work mechanism that forces clients to perform computational effort before service is granted, thereby increasing the cost of large-scale automated Denial-of-Service (DoS) attacks.
+### [Hierarchical Identity-Based Signatures](Main%20Programs/HierarchicalIdentityBasedSignatures) — Schnorr-based 2-level HIBS
+PKG-issued level-1 keys delegate signing authority to level-2 identities; verification uses identity-derived public keys.
+`Elliptic Curves` `Schnorr` `Identity-Based Crypto` `Key Delegation`
 
-  - To run, navigate to VerifySolution folder in terminal
-  - Run following command in terminal:
-  ```bash VerifyYourSolutionClientPuzzle.sh```
+### [Arazi–Qi Key Exchange](Main%20Programs/AraziQiKeyExchange) — identity-based authenticated Diffie–Hellman
+EC-based IBAKE: CA-derived identity public keys + ephemeral DH = authenticated shared secret without certificate exchange.
+`Elliptic Curves` `IBAKE` `Authenticated Key Exchange`
 
-**Digital Signature Via Hash Program - Output Feedback Mode**
+### [Tree Group Diffie–Hellman](Main%20Programs/TreeGroupDiffieHellman) — dynamic group key agreement
+Binary key tree supporting setup, join, leave, merge, and refresh — forward/backward secrecy under membership change.
+`BIGNUM Modular Exp` `Group Key Agreement` `Diffie–Hellman`
 
-Implementation of a two-party secure communication system in C. Provides symmetric encryption using a PRNG-based toy stream cipher built from ChaCha20. The shared 32-byte seed is expanded into a keystream matching the message length, which is XORed with the plaintext to generate ciphertext. Utilizes ChaCha20 PRNG and SHA256 hashing functions from the OpenSSL library. Supports secure decryption, integrity verification via hash comparison, and acknowledgment generation through file-based inter-process communication.
-  
-Alice reads the message from the "Message.txt" file and the shared seed from the "SharedSeed.txt" file. The secret key is then generated from the shared seed by utilizing the ChaCha20 PRNG function from OpenSSL. The key size matches the message length. The Hex format of the key is written in a file named "Key.txt". The message is XOR'd with the secret key to obtain the ciphertext: (Ciphertext = Message XOR Key). The Hex format of the ciphertext is written in a file named "Ciphertext.txt". Once Bob has processed the message, Alice reads Bob's computed hash from "Hash.txt". If the comparison is successful, Alice can be confident that Bob has received the accurate message. She then writes "Acknowledgment Successful" in a file called "Acknowledgment.txt." Conversely, if the comparison fails,she records "Acknowledgment Failed."
-      
-Bob reads the ciphertext from the "Ciphertext.txt" file. The shared seed is read from the "SharedSeed.txt" file. The secret key is generated from the shared seed by utilizing the PRNG function from OpenSSL. The key size matches the message length. The received ciphertext is XOR'd with the secret key to obtain the plaintext: (plaintext = ciphertext XOR key). The decrypted plaintext is written in a file named "Plaintext.txt". The plaintext is hashed via SHA256 and the Hex format of the hash is written in a file named "Hash.txt" for Alice to verify.
+### [Lightweight Chained MAC](Main%20Programs/LightweightChainedMAC) — sequential aggregate HMAC <sub>*(source pending)*</sub>
+Chained HMAC where each tag depends on the previous, yielding one O(1) aggregate tag for N messages.
+`HMAC-SHA256` `Aggregate Authentication` `Chained MAC`
 
-  - To run, navigate to VerifySolution folder in terminal
-  - Run following command in terminal:
-  ```bash VerifyingYourSolution1.sh```
+### [Condensed RSA](Main%20Programs/CondensedRSA) — RSA-homomorphism aggregate signatures
+Exploits RSA's multiplicative homomorphism to compress *j* signatures into a single same-size aggregate.
+`RSA` `Aggregate Signatures` `Homomorphic`
 
-**Merkle Hash Tree Program**
+---
 
-Implementation of a Merkle Hash Tree (MHT) construction and verification mechanism in C. Provides cryptographic data integrity and authentication using a binary hash tree built from eight 256-bit messages. Utilizes SHA256 hashing functions from the OpenSSL library to generate leaf hashes, iteratively compute internal node hashes via concatenation, and derive a single root hash. Supports offline root computation and online authentication path generation for any indexed leaf, enabling efficient integrity verification through hash path reconstruction.
+## Detailed Project Descriptions
 
-The program reads 8 newline-separated 32-byte lines of data from either the "Messages1.txt" or "Messages2.txt" file. It uses SHA256 to hash each line of data to obtain values of the leaves of the Merkle Hash Tree (MHT), then calculates the remaining nodes by concatenating their children's hashes from left to right and hashing the result. The root of the resulting MHT is converted to hex and written to "TheRoot.txt" file. 
+### Digital Forensics Tools
+> Forward-secure, aggregate HMAC logger with AES-CTR encryption and an offline auditor.
 
-The program also reads a user-inputted message index and calculates the verification path for that index. Starting at the message index leaf and going up each level through the parent and ending at the root, the hash value of path node's sibling is converted to hex format and added to the path and separated by a newline character. The verification path is written to "ThePath.txt" file.
+`C` `OpenSSL` `AES-CTR` `HMAC-SHA256` `ChaCha20 PRNG` `Forward Security`
 
-  - To run, navigate to VerifySolution folder in terminal
-  - Run following command in terminal:
-  ```bash VerifyYourSolutionMHT.sh```
+**What it does.** Implements a two-binary system — [`alice.c`](Main%20Programs/DigitalForensicsTools/alice.c) (logging machine) and [`bob.c`](Main%20Programs/DigitalForensicsTools/bob.c) (auditor) — that delivers compromise-resilient encryption, integrity, and authentication with O(1) aggregate tag size.
 
-**Support Programs**
-  - Side projects built to work towards the larger main projects
+**How it works.** Alice expands a shared seed via ChaCha20 PRNG into the initial 32-byte key, then for each message: encrypts with AES-CTR, computes an HMAC-SHA256 individual tag, folds it into the running aggregate via `S(1,i) = SHA256(S(1,i-1) || S(i))`, and ratchets the key forward with `k(i+1) = SHA256(k(i))`. Bob re-derives keys from the same seed, recomputes the aggregate, and decrypts only if the aggregate matches.
 
+**Files**
+- [`alice.c`](Main%20Programs/DigitalForensicsTools/alice.c) — logger / writer
+- [`bob.c`](Main%20Programs/DigitalForensicsTools/bob.c) — auditor / verifier
+- [`VerifySolution/`](Main%20Programs/DigitalForensicsTools/VerifySolution) — test vectors + harness
+
+**Build & Verify**
+```bash
+gcc alice.c -lcrypto -o alice
+gcc bob.c   -lcrypto -o bob
+cd VerifySolution && bash VerifyYourSolution3.sh
+```
+
+---
+
+### Client–Server Puzzle
+> Hash-based proof-of-work that gates server resources behind client compute.
+
+`C` `OpenSSL` `SHA-256` `Proof-of-Work` `DoS Mitigation`
+
+**What it does.** A three-binary protocol — [`server.c`](Main%20Programs/ClientServerPuzzle/server.c), [`client.c`](Main%20Programs/ClientServerPuzzle/client.c), [`verify.c`](Main%20Programs/ClientServerPuzzle/verify.c) — that forces clients to perform computational work before service is granted, raising the cost of large-scale DoS.
+
+**How it works.** Server emits a challenge `(timestamp || nonce)` and difficulty `k`. Client iterates over nonces computing `SHA256(challenge || nonce)` until the hash has `k` leading zero bits, then ships the nonce. Verifier recomputes the hash once and accepts iff the bit condition holds — solve cost is `O(2^k)`, verify cost is `O(1)`.
+
+**Files**
+- [`server.c`](Main%20Programs/ClientServerPuzzle/server.c) — puzzle generator
+- [`client.c`](Main%20Programs/ClientServerPuzzle/client.c) — brute-force solver
+- [`verify.c`](Main%20Programs/ClientServerPuzzle/verify.c) — solution verifier
+
+**Build & Verify**
+```bash
+gcc server.c -lcrypto -o server
+gcc client.c -lcrypto -o client
+gcc verify.c -lcrypto -o verify
+cd VerifySolution && bash VerifyYourSolutionClientPuzzle.sh
+```
+
+---
+
+### Digital Signature Via Hash
+> Symmetric channel between two parties with SHA-256–based acknowledgment.
+
+`C` `OpenSSL` `ChaCha20 PRNG` `SHA-256` `XOR Stream Cipher`
+
+**What it does.** Two-party communication system using a PRNG-derived one-time stream cipher: Alice encrypts a message, Bob decrypts and proves receipt via a SHA-256 hash that Alice verifies.
+
+**How it works.** Both parties share a 32-byte seed. Alice expands the seed via ChaCha20 PRNG into a keystream matching the message length, XORs plaintext with the keystream to produce ciphertext, and writes ciphertext to disk. Bob reads the ciphertext, expands the same seed, recovers the plaintext, and writes `SHA256(plaintext)`. Alice compares Bob's hash against her own computed hash and writes "Acknowledgment Successful" or "Acknowledgment Failed".
+
+**Files**
+- [`alice.c`](Main%20Programs/DigitalSignatureViaHash/alice.c) — sender
+- [`bob.c`](Main%20Programs/DigitalSignatureViaHash/bob.c) — receiver
+
+**Build & Verify**
+```bash
+gcc alice.c -lcrypto -o alice
+gcc bob.c   -lcrypto -o bob
+cd VerifySolution && bash VerifyingYourSolution1.sh
+```
+
+---
+
+### Merkle Hash Tree
+> Eight-leaf binary hash tree with O(log n) authentication paths.
+
+`C` `OpenSSL` `SHA-256` `Merkle Tree` `Data Integrity`
+
+**What it does.** Single binary, [`mht.c`](Main%20Programs/MerkleHashTree/mht.c), builds an 8-leaf Merkle Hash Tree over 32-byte messages, emits the root, and produces the authentication path for any chosen leaf index.
+
+**How it works.** Each leaf is `SHA256(message)`. Internal nodes are `SHA256(left || right)`. The root is written to `TheRoot.txt`. For a requested leaf index, the program walks from leaf to root, emitting each visited node's sibling hash into `ThePath.txt` — the receiver can re-derive the root by hashing along the path.
+
+**Files**
+- [`mht.c`](Main%20Programs/MerkleHashTree/mht.c) — tree construction + authentication path
+
+**Build & Verify**
+```bash
+gcc mht.c -lcrypto -o mht
+cd VerifySolution && bash VerifyYourSolutionMHT.sh
+```
+
+---
+
+### Hierarchical Identity-Based Signatures
+> Two-level Schnorr-based HIBS with PKG → level-1 → level-2 key delegation.
+
+`C` `OpenSSL` `Elliptic Curves` `Schnorr` `Identity-Based Crypto`
+
+**What it does.** A four-binary HIBS suite — [`pkg.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/pkg.c), [`signer1.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/signer1.c), [`signer2.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/signer2.c), [`verifier.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/verifier.c) — implementing setup, level-1 extract, level-2 extract + sign, and verify.
+
+**How it works.** PKG samples master secret `x`, publishes master public `mpk = x·P`. Level-1 extract: `Q_ID1 = b1·P`, `c_ID1 = H(ID_1 || Q_ID1)`, `sk_ID1 = x·c_ID1 + b1 mod q`. Level-2 extract delegates similarly from `sk_ID1`. Signing follows Schnorr: commit `R = r·P`, hash `h = H(m || R)`, respond `s = r + h·sk`. Verify reconstructs the effective public key `PK_eff` from identity hashes and checks `s·P ?= R + h·PK_eff`.
+
+**Files**
+- [`pkg.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/pkg.c) — master key generation
+- [`signer1.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/signer1.c) — level-1 key extraction
+- [`signer2.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/signer2.c) — level-2 extraction + signing
+- [`verifier.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/verifier.c) — signature verification
+- [`RequiredFunctions.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/RequiredFunctions.c) / [`.h`](Main%20Programs/HierarchicalIdentityBasedSignatures/RequiredFunctions.h) — EC helpers
+
+**Build & Verify**
+```bash
+gcc pkg.c      RequiredFunctions.c -lcrypto -o pkg
+gcc signer1.c  RequiredFunctions.c -lcrypto -o signer1
+gcc signer2.c  RequiredFunctions.c -lcrypto -o signer2
+gcc verifier.c RequiredFunctions.c -lcrypto -o verifier
+# Run with the test vectors under TestVectors/
+```
+
+---
+
+### Arazi–Qi Key Exchange
+> Identity-based authenticated Diffie–Hellman on elliptic curves — no certificate exchange.
+
+`C` `OpenSSL` `Elliptic Curves` `IBAKE` `Authenticated Key Exchange`
+
+**What it does.** A three-binary IBAKE protocol — [`ca.c`](Main%20Programs/AraziQiKeyExchange/ca.c), [`alice.c`](Main%20Programs/AraziQiKeyExchange/alice.c), [`bob.c`](Main%20Programs/AraziQiKeyExchange/bob.c) — that derives an authenticated shared secret between identities without exchanging certificates.
+
+**How it works.** CA holds master secret `d`, publishes `D = d·P`. For each identity `ID`, CA issues `U = b·P`, `h = H(ID || U)`, `x = (h·b + d) mod q`. Alice/Bob compute ephemeral keys `E = p·P` and exchange. Each side derives `K_ab = x_a·(h_B·U_b + D) + p_a·E_b` (and the symmetric version on Bob's side) — both arrive at the same shared secret, with implicit authentication from the identity-binding term.
+
+**Files**
+- [`ca.c`](Main%20Programs/AraziQiKeyExchange/ca.c) — Certification Authority master setup + per-user issuance
+- [`alice.c`](Main%20Programs/AraziQiKeyExchange/alice.c) — party A
+- [`bob.c`](Main%20Programs/AraziQiKeyExchange/bob.c) — party B
+- [`RequiredFunctions.c`](Main%20Programs/AraziQiKeyExchange/RequiredFunctions.c) / [`.h`](Main%20Programs/AraziQiKeyExchange/RequiredFunctions.h) — EC helpers
+
+**Build & Verify**
+```bash
+gcc ca.c    RequiredFunctions.c -lcrypto -o ca
+gcc alice.c RequiredFunctions.c -lcrypto -o alice
+gcc bob.c   RequiredFunctions.c -lcrypto -o bob
+# Run with test vectors under TestVectors/
+```
+
+---
+
+### Tree Group Diffie–Hellman
+> Binary-tree group key agreement supporting dynamic membership.
+
+`C` `OpenSSL` `BIGNUM` `Group Key Agreement` `Diffie–Hellman`
+
+**What it does.** A five-binary TGDH suite — [`setup.c`](Main%20Programs/TreeGroupDiffieHellman/setup.c), [`join.c`](Main%20Programs/TreeGroupDiffieHellman/join.c), [`leave.c`](Main%20Programs/TreeGroupDiffieHellman/leave.c), [`merge.c`](Main%20Programs/TreeGroupDiffieHellman/merge.c), [`refresh.c`](Main%20Programs/TreeGroupDiffieHellman/refresh.c) — that maintains a shared group key across membership change while preserving forward and backward secrecy.
+
+**How it works.** Each group member is a leaf in a binary key tree. A leaf holds secret `sk_i`; the tree recurrence is `sk_node = BK_left ^ K_right mod p` where `BK = g^sk mod p` is the blinded key. The group key is the value at the root. Setup builds the initial tree from member secrets and parameters `(p, g)`. Join inserts a new leaf and the sponsor recomputes affected internal keys. Leave promotes the sibling and the sponsor reruns the same key-up-the-co-path computation. Refresh rotates a leaf's secret; merge concatenates two groups' leaf sets and rebuilds.
+
+**Files**
+- [`setup.c`](Main%20Programs/TreeGroupDiffieHellman/setup.c) — initial group key
+- [`join.c`](Main%20Programs/TreeGroupDiffieHellman/join.c) — add member
+- [`leave.c`](Main%20Programs/TreeGroupDiffieHellman/leave.c) — remove member
+- [`merge.c`](Main%20Programs/TreeGroupDiffieHellman/merge.c) — combine two groups
+- [`refresh.c`](Main%20Programs/TreeGroupDiffieHellman/refresh.c) — rotate a leaf secret
+- [`tgdh_shared.c`](Main%20Programs/TreeGroupDiffieHellman/tgdh_shared.c) — tree primitives
+- [`RequiredFunctionsTGDH.c`](Main%20Programs/TreeGroupDiffieHellman/RequiredFunctionsTGDH.c) — BIGNUM / file-IO helpers
+
+**Build & Verify**
+```bash
+gcc setup.c   tgdh_shared.c RequiredFunctionsTGDH.c -lcrypto -o setup
+gcc join.c    tgdh_shared.c RequiredFunctionsTGDH.c -lcrypto -o join
+gcc leave.c   tgdh_shared.c RequiredFunctionsTGDH.c -lcrypto -o leave
+gcc merge.c   tgdh_shared.c RequiredFunctionsTGDH.c -lcrypto -o merge
+gcc refresh.c tgdh_shared.c RequiredFunctionsTGDH.c -lcrypto -o refresh
+bash VerifyingYourSolutionTGDH.sh
+```
+
+---
+
+### Lightweight Chained MAC
+> Sequential HMAC chain producing one O(1) aggregate tag for N messages.
+
+`C` `OpenSSL` `HMAC-SHA256` `Aggregate Authentication` `Chained MAC`
+
+> **Note.** The source file `lc_umac.c` is not yet in this repository — only the test vectors and verify harness are tracked. The verify script ([`VerifyYourLCMACSolution.sh`](Main%20Programs/LightweightChainedMAC/VerifyYourLCMACSolution.sh)) will compile and exercise the source once it lands.
+
+**What it does (when source is added).** Implements a lightweight chained MAC: each per-message tag is computed under a chained key, and an aggregate tag is folded across messages, yielding constant-size authentication for a sequence of N messages.
+
+**Files**
+- [`TestVectors/`](Main%20Programs/LightweightChainedMAC/TestVectors) — message/seed inputs and expected outputs
+- [`VerifyYourLCMACSolution.sh`](Main%20Programs/LightweightChainedMAC/VerifyYourLCMACSolution.sh) — build + run harness
+
+---
+
+### Condensed RSA
+> Aggregate RSA signatures via multiplicative homomorphism — *j* signatures compressed to one.
+
+`C` `OpenSSL` `RSA` `Aggregate Signatures` `Homomorphic`
+
+**What it does.** Single binary, [`rsaCommented.c`](Main%20Programs/CondensedRSA/rsaCommented.c), produces both individual RSA signatures and a single condensed aggregate over a set of messages.
+
+**How it works.** For each message `m_i`, compute `h_i = H(m_i)` and `sig_i = h_i^d mod n`. The condensed signature is the product `agg = ∏ sig_i mod n` — same size as a single signature regardless of `j`. Verification: compute `∏ h_i mod n` and check `agg^e ≡ ∏ h_i (mod n)`. This exploits RSA's multiplicative homomorphism `(a·b)^d = a^d · b^d mod n`.
+
+**Files**
+- [`rsaCommented.c`](Main%20Programs/CondensedRSA/rsaCommented.c) — showcase implementation with verbose explanatory comments
+- [`TestVectors/`](Main%20Programs/CondensedRSA/TestVectors) — RSA parameters, messages, expected signatures
+- [`VerifyYourCRSASolution.sh`](Main%20Programs/CondensedRSA/VerifyYourCRSASolution.sh) — build + run harness
+
+**Build & Verify**
+```bash
+cd TestVectors && bash VerifyYourCRSASolution.sh
+```
+
+---
+
+## Repository Layout
+
+```
+Main Programs/                          # All showcase projects
+├── DigitalForensicsTools/              # Forward-secure aggregate HMAC + AES-CTR
+├── ClientServerPuzzle/                 # SHA-256 PoW
+├── DigitalSignatureViaHash/            # ChaCha20 stream cipher + hash ACK
+├── MerkleHashTree/                     # SHA-256 MHT + auth paths
+├── HierarchicalIdentityBasedSignatures/# Schnorr 2-level HIBS
+├── AraziQiKeyExchange/                 # EC IBAKE
+├── TreeGroupDiffieHellman/             # Group key agreement
+├── LightweightChainedMAC/               # Chained HMAC (source pending)
+└── CondensedRSA/                       # RSA aggregate signatures
+
+CyberInfra-PnP-Mac/                     # VirtualBox unattended-install automation
+```
+
+## Build Requirements
+
+- C compiler (`gcc` or `clang`)
+- OpenSSL development headers (`libssl-dev` / `openssl@3` on macOS via Homebrew)
+- POSIX shell for verify scripts (`bash`)
+
+Each project links against `-lcrypto` from OpenSSL.
