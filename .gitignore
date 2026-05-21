@@ -12,3 +12,30 @@ c_cpp_properties.json
 *.cfg
 Unattended-217adf94-7c46-4163-a7b7-8fc7798413f4-user-data
 Unattended-217adf94-7c46-4163-a7b7-8fc7798413f4-vboxpostinstall.sh
+
+# Local dev scratch (HW1–8 staging area for Main Programs)
+Support Programs/
+
+# Compiled binaries and object files inside Main Programs
+Main Programs/**/*.o
+Main Programs/**/pkg
+Main Programs/**/signer1
+Main Programs/**/signer2
+Main Programs/**/verifier
+Main Programs/**/ca
+Main Programs/**/alice
+Main Programs/**/bob
+Main Programs/**/rsa
+Main Programs/**/lc_umac
+Main Programs/**/mht
+Main Programs/**/server
+Main Programs/**/client
+Main Programs/**/verify
+Main Programs/**/setup
+Main Programs/**/join
+Main Programs/**/leave
+Main Programs/**/merge
+Main Programs/**/refresh
+Main Programs/**/Client
+Main Programs/**/Server
+Main Programs/**/Verify
