@@ -55,9 +55,13 @@ Exploits RSA's multiplicative homomorphism to compress *j* signatures into a sin
 
 `C` `OpenSSL` `AES-CTR` `HMAC-SHA256` `ChaCha20 PRNG` `Forward Security`
 
-**What it does.** Implements a two-binary system — [`alice.c`](Main%20Programs/DigitalForensicsTools/alice.c) (logging machine) and [`bob.c`](Main%20Programs/DigitalForensicsTools/bob.c) (auditor) — that delivers compromise-resilient encryption, integrity, and authentication with O(1) aggregate tag size.
+**Objective.**
 
-**How it works.** Alice expands a shared seed via ChaCha20 PRNG into the initial 32-byte key, then for each message: encrypts with AES-CTR, computes an HMAC-SHA256 individual tag, folds it into the running aggregate via `S(1,i) = SHA256(S(1,i-1) || S(i))`, and ratchets the key forward with `k(i+1) = SHA256(k(i))`. Bob re-derives keys from the same seed, recomputes the aggregate, and decrypts only if the aggregate matches.
+Implements a two-binary system — [`alice.c`](Main%20Programs/DigitalForensicsTools/alice.c) (logging machine) and [`bob.c`](Main%20Programs/DigitalForensicsTools/bob.c) (auditor) — that delivers compromise-resilient encryption, integrity, and authentication with O(1) aggregate tag size.
+
+**Implementation Strategy.**
+
+Alice expands a shared seed via ChaCha20 PRNG into the initial 32-byte key, then for each message: encrypts with AES-CTR, computes an HMAC-SHA256 individual tag, folds it into the running aggregate via `S(1,i) = SHA256(S(1,i-1) || S(i))`, and ratchets the key forward with `k(i+1) = SHA256(k(i))`. Bob re-derives keys from the same seed, recomputes the aggregate, and decrypts only if the aggregate matches.
 
 **Files**
 - [`alice.c`](Main%20Programs/DigitalForensicsTools/alice.c) — logger / writer
@@ -66,9 +70,8 @@ Exploits RSA's multiplicative homomorphism to compress *j* signatures into a sin
 
 **Build & Verify**
 ```bash
-gcc alice.c -lcrypto -o alice
-gcc bob.c   -lcrypto -o bob
-cd VerifySolution && bash VerifyYourSolution3.sh
+# from within VerifySolution/
+bash VerifyYourSolution3.sh
 ```
 
 ---
@@ -78,9 +81,13 @@ cd VerifySolution && bash VerifyYourSolution3.sh
 
 `C` `OpenSSL` `SHA-256` `Proof-of-Work` `DoS Mitigation`
 
-**What it does.** A three-binary protocol — [`server.c`](Main%20Programs/ClientServerPuzzle/server.c), [`client.c`](Main%20Programs/ClientServerPuzzle/client.c), [`verify.c`](Main%20Programs/ClientServerPuzzle/verify.c) — that forces clients to perform computational work before service is granted, raising the cost of large-scale DoS.
+**Objective.**
 
-**How it works.** Server emits a challenge `(timestamp || nonce)` and difficulty `k`. Client iterates over nonces computing `SHA256(challenge || nonce)` until the hash has `k` leading zero bits, then ships the nonce. Verifier recomputes the hash once and accepts iff the bit condition holds — solve cost is `O(2^k)`, verify cost is `O(1)`.
+A three-binary protocol — [`server.c`](Main%20Programs/ClientServerPuzzle/server.c), [`client.c`](Main%20Programs/ClientServerPuzzle/client.c), [`verify.c`](Main%20Programs/ClientServerPuzzle/verify.c) — that forces clients to perform computational work before service is granted, raising the cost of large-scale DoS.
+
+**Implementation Strategy.**
+
+Server emits a challenge `(timestamp || nonce)` and difficulty `k`. Client iterates over nonces computing `SHA256(challenge || nonce)` until the hash has `k` leading zero bits, then ships the nonce. Verifier recomputes the hash once and accepts iff the bit condition holds — solve cost is `O(2^k)`, verify cost is `O(1)`.
 
 **Files**
 - [`server.c`](Main%20Programs/ClientServerPuzzle/server.c) — puzzle generator
@@ -89,10 +96,8 @@ cd VerifySolution && bash VerifyYourSolution3.sh
 
 **Build & Verify**
 ```bash
-gcc server.c -lcrypto -o server
-gcc client.c -lcrypto -o client
-gcc verify.c -lcrypto -o verify
-cd VerifySolution && bash VerifyYourSolutionClientPuzzle.sh
+# from within VerifySolution/
+bash VerifyYourSolutionClientPuzzle.sh
 ```
 
 ---
@@ -102,9 +107,13 @@ cd VerifySolution && bash VerifyYourSolutionClientPuzzle.sh
 
 `C` `OpenSSL` `ChaCha20 PRNG` `SHA-256` `XOR Stream Cipher`
 
-**What it does.** Two-party communication system using a PRNG-derived one-time stream cipher: Alice encrypts a message, Bob decrypts and proves receipt via a SHA-256 hash that Alice verifies.
+**Objective.**
 
-**How it works.** Both parties share a 32-byte seed. Alice expands the seed via ChaCha20 PRNG into a keystream matching the message length, XORs plaintext with the keystream to produce ciphertext, and writes ciphertext to disk. Bob reads the ciphertext, expands the same seed, recovers the plaintext, and writes `SHA256(plaintext)`. Alice compares Bob's hash against her own computed hash and writes "Acknowledgment Successful" or "Acknowledgment Failed".
+Two-party communication system using a PRNG-derived one-time stream cipher: Alice encrypts a message, Bob decrypts and proves receipt via a SHA-256 hash that Alice verifies.
+
+**Implementation Strategy.**
+
+Both parties share a 32-byte seed. Alice expands the seed via ChaCha20 PRNG into a keystream matching the message length, XORs plaintext with the keystream to produce ciphertext, and writes ciphertext to disk. Bob reads the ciphertext, expands the same seed, recovers the plaintext, and writes `SHA256(plaintext)`. Alice compares Bob's hash against her own computed hash and writes "Acknowledgment Successful" or "Acknowledgment Failed".
 
 **Files**
 - [`alice.c`](Main%20Programs/DigitalSignatureViaHash/alice.c) — sender
@@ -112,9 +121,8 @@ cd VerifySolution && bash VerifyYourSolutionClientPuzzle.sh
 
 **Build & Verify**
 ```bash
-gcc alice.c -lcrypto -o alice
-gcc bob.c   -lcrypto -o bob
-cd VerifySolution && bash VerifyingYourSolution1.sh
+# from within VerifySolution/
+bash VerifyingYourSolution.sh
 ```
 
 ---
@@ -124,17 +132,21 @@ cd VerifySolution && bash VerifyingYourSolution1.sh
 
 `C` `OpenSSL` `SHA-256` `Merkle Tree` `Data Integrity`
 
-**What it does.** Single binary, [`mht.c`](Main%20Programs/MerkleHashTree/mht.c), builds an 8-leaf Merkle Hash Tree over 32-byte messages, emits the root, and produces the authentication path for any chosen leaf index.
+**Objective.**
 
-**How it works.** Each leaf is `SHA256(message)`. Internal nodes are `SHA256(left || right)`. The root is written to `TheRoot.txt`. For a requested leaf index, the program walks from leaf to root, emitting each visited node's sibling hash into `ThePath.txt` — the receiver can re-derive the root by hashing along the path.
+Single binary, [`mht.c`](Main%20Programs/MerkleHashTree/mht.c), builds an 8-leaf Merkle Hash Tree over 32-byte messages, emits the root, and produces the authentication path for any chosen leaf index.
+
+**Implementation Strategy.**
+
+Each leaf is `SHA256(message)`. Internal nodes are `SHA256(left || right)`. The root is written to `TheRoot.txt`. For a requested leaf index, the program walks from leaf to root, emitting each visited node's sibling hash into `ThePath.txt` — the receiver can re-derive the root by hashing along the path.
 
 **Files**
 - [`mht.c`](Main%20Programs/MerkleHashTree/mht.c) — tree construction + authentication path
 
 **Build & Verify**
 ```bash
-gcc mht.c -lcrypto -o mht
-cd VerifySolution && bash VerifyYourSolutionMHT.sh
+# from within VerifySolution/
+bash VerifyYourSolutionMHT.sh
 ```
 
 ---
@@ -144,9 +156,13 @@ cd VerifySolution && bash VerifyYourSolutionMHT.sh
 
 `C` `OpenSSL` `Elliptic Curves` `Schnorr` `Identity-Based Crypto`
 
-**What it does.** A four-binary HIBS suite — [`pkg.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/pkg.c), [`signer1.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/signer1.c), [`signer2.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/signer2.c), [`verifier.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/verifier.c) — implementing setup, level-1 extract, level-2 extract + sign, and verify.
+**Objective.**
 
-**How it works.** PKG samples master secret `x`, publishes master public `mpk = x·P`. Level-1 extract: `Q_ID1 = b1·P`, `c_ID1 = H(ID_1 || Q_ID1)`, `sk_ID1 = x·c_ID1 + b1 mod q`. Level-2 extract delegates similarly from `sk_ID1`. Signing follows Schnorr: commit `R = r·P`, hash `h = H(m || R)`, respond `s = r + h·sk`. Verify reconstructs the effective public key `PK_eff` from identity hashes and checks `s·P ?= R + h·PK_eff`.
+A four-binary HIBS suite — [`pkg.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/pkg.c), [`signer1.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/signer1.c), [`signer2.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/signer2.c), [`verifier.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/verifier.c) — implementing setup, level-1 extract, level-2 extract + sign, and verify.
+
+**Implementation Strategy.**
+
+PKG samples master secret `x`, publishes master public `mpk = x·P`. Level-1 extract: `Q_ID1 = b1·P`, `c_ID1 = H(ID_1 || Q_ID1)`, `sk_ID1 = x·c_ID1 + b1 mod q`. Level-2 extract delegates similarly from `sk_ID1`. Signing follows Schnorr: commit `R = r·P`, hash `h = H(m || R)`, respond `s = r + h·sk`. Verify reconstructs the effective public key `PK_eff` from identity hashes and checks `s·P ?= R + h·PK_eff`.
 
 **Files**
 - [`pkg.c`](Main%20Programs/HierarchicalIdentityBasedSignatures/pkg.c) — master key generation
@@ -157,11 +173,8 @@ cd VerifySolution && bash VerifyYourSolutionMHT.sh
 
 **Build & Verify**
 ```bash
-gcc pkg.c      RequiredFunctions.c -lcrypto -o pkg
-gcc signer1.c  RequiredFunctions.c -lcrypto -o signer1
-gcc signer2.c  RequiredFunctions.c -lcrypto -o signer2
-gcc verifier.c RequiredFunctions.c -lcrypto -o verifier
-# Run with the test vectors under TestVectors/
+# from within TestVectors/
+bash VerifyHIBS.sh
 ```
 
 ---
@@ -171,9 +184,13 @@ gcc verifier.c RequiredFunctions.c -lcrypto -o verifier
 
 `C` `OpenSSL` `Elliptic Curves` `IBAKE` `Authenticated Key Exchange`
 
-**What it does.** A three-binary IBAKE protocol — [`ca.c`](Main%20Programs/AraziQiKeyExchange/ca.c), [`alice.c`](Main%20Programs/AraziQiKeyExchange/alice.c), [`bob.c`](Main%20Programs/AraziQiKeyExchange/bob.c) — that derives an authenticated shared secret between identities without exchanging certificates.
+**Objective.**
 
-**How it works.** CA holds master secret `d`, publishes `D = d·P`. For each identity `ID`, CA issues `U = b·P`, `h = H(ID || U)`, `x = (h·b + d) mod q`. Alice/Bob compute ephemeral keys `E = p·P` and exchange. Each side derives `K_ab = x_a·(h_B·U_b + D) + p_a·E_b` (and the symmetric version on Bob's side) — both arrive at the same shared secret, with implicit authentication from the identity-binding term.
+A three-binary IBAKE protocol — [`ca.c`](Main%20Programs/AraziQiKeyExchange/ca.c), [`alice.c`](Main%20Programs/AraziQiKeyExchange/alice.c), [`bob.c`](Main%20Programs/AraziQiKeyExchange/bob.c) — that derives an authenticated shared secret between identities without exchanging certificates.
+
+**Implementation Strategy.**
+
+CA holds master secret `d`, publishes `D = d·P`. For each identity `ID`, CA issues `U = b·P`, `h = H(ID || U)`, `x = (h·b + d) mod q`. Alice/Bob compute ephemeral keys `E = p·P` and exchange. Each side derives `K_ab = x_a·(h_B·U_b + D) + p_a·E_b` (and the symmetric version on Bob's side) — both arrive at the same shared secret, with implicit authentication from the identity-binding term.
 
 **Files**
 - [`ca.c`](Main%20Programs/AraziQiKeyExchange/ca.c) — Certification Authority master setup + per-user issuance
@@ -183,10 +200,8 @@ gcc verifier.c RequiredFunctions.c -lcrypto -o verifier
 
 **Build & Verify**
 ```bash
-gcc ca.c    RequiredFunctions.c -lcrypto -o ca
-gcc alice.c RequiredFunctions.c -lcrypto -o alice
-gcc bob.c   RequiredFunctions.c -lcrypto -o bob
-# Run with test vectors under TestVectors/
+# from within TestVectors/
+bash VerifyAraziQi.sh
 ```
 
 ---
@@ -196,9 +211,13 @@ gcc bob.c   RequiredFunctions.c -lcrypto -o bob
 
 `C` `OpenSSL` `BIGNUM` `Group Key Agreement` `Diffie–Hellman`
 
-**What it does.** A five-binary TGDH suite — [`setup.c`](Main%20Programs/TreeGroupDiffieHellman/setup.c), [`join.c`](Main%20Programs/TreeGroupDiffieHellman/join.c), [`leave.c`](Main%20Programs/TreeGroupDiffieHellman/leave.c), [`merge.c`](Main%20Programs/TreeGroupDiffieHellman/merge.c), [`refresh.c`](Main%20Programs/TreeGroupDiffieHellman/refresh.c) — that maintains a shared group key across membership change while preserving forward and backward secrecy.
+**Objective.**
 
-**How it works.** Each group member is a leaf in a binary key tree. A leaf holds secret `sk_i`; the tree recurrence is `sk_node = BK_left ^ K_right mod p` where `BK = g^sk mod p` is the blinded key. The group key is the value at the root. Setup builds the initial tree from member secrets and parameters `(p, g)`. Join inserts a new leaf and the sponsor recomputes affected internal keys. Leave promotes the sibling and the sponsor reruns the same key-up-the-co-path computation. Refresh rotates a leaf's secret; merge concatenates two groups' leaf sets and rebuilds.
+A five-binary TGDH suite — [`setup.c`](Main%20Programs/TreeGroupDiffieHellman/setup.c), [`join.c`](Main%20Programs/TreeGroupDiffieHellman/join.c), [`leave.c`](Main%20Programs/TreeGroupDiffieHellman/leave.c), [`merge.c`](Main%20Programs/TreeGroupDiffieHellman/merge.c), [`refresh.c`](Main%20Programs/TreeGroupDiffieHellman/refresh.c) — that maintains a shared group key across membership change while preserving forward and backward secrecy.
+
+**Implementation Strategy.**
+
+Each group member is a leaf in a binary key tree. A leaf holds secret `sk_i`; the tree recurrence is `sk_node = BK_left ^ K_right mod p` where `BK = g^sk mod p` is the blinded key. The group key is the value at the root. Setup builds the initial tree from member secrets and parameters `(p, g)`. Join inserts a new leaf and the sponsor recomputes affected internal keys. Leave promotes the sibling and the sponsor reruns the same key-up-the-co-path computation. Refresh rotates a leaf's secret; merge concatenates two groups' leaf sets and rebuilds.
 
 **Files**
 - [`setup.c`](Main%20Programs/TreeGroupDiffieHellman/setup.c) — initial group key
@@ -211,11 +230,7 @@ gcc bob.c   RequiredFunctions.c -lcrypto -o bob
 
 **Build & Verify**
 ```bash
-gcc setup.c   tgdh_shared.c RequiredFunctionsTGDH.c -lcrypto -o setup
-gcc join.c    tgdh_shared.c RequiredFunctionsTGDH.c -lcrypto -o join
-gcc leave.c   tgdh_shared.c RequiredFunctionsTGDH.c -lcrypto -o leave
-gcc merge.c   tgdh_shared.c RequiredFunctionsTGDH.c -lcrypto -o merge
-gcc refresh.c tgdh_shared.c RequiredFunctionsTGDH.c -lcrypto -o refresh
+# from within TreeGroupDiffieHellman/
 bash VerifyingYourSolutionTGDH.sh
 ```
 
@@ -228,7 +243,9 @@ bash VerifyingYourSolutionTGDH.sh
 
 > **Status.** Source ([`lc_umac.c`](Main%20Programs/LightweightChainedMAC/lc_umac.c)) compiles cleanly, but file output does not yet match the expected test vectors — actively being debugged.
 
-**What it does.** Implements a lightweight chained MAC: each per-message tag is computed under a chained key, and an aggregate tag is folded across messages, yielding constant-size authentication for a sequence of N messages.
+**Objective.**
+
+Implements a lightweight chained MAC: each per-message tag is computed under a chained key, and an aggregate tag is folded across messages, yielding constant-size authentication for a sequence of N messages.
 
 **Files**
 - [`lc_umac.c`](Main%20Programs/LightweightChainedMAC/lc_umac.c) — LCMAC implementation
@@ -237,7 +254,8 @@ bash VerifyingYourSolutionTGDH.sh
 
 **Build & Verify**
 ```bash
-cd TestVectors && bash VerifyYourLCMACSolution.sh
+# from within TestVectors/
+bash VerifyYourLCMACSolution.sh
 ```
 
 ---
@@ -247,9 +265,13 @@ cd TestVectors && bash VerifyYourLCMACSolution.sh
 
 `C` `OpenSSL` `RSA` `Aggregate Signatures` `Homomorphic`
 
-**What it does.** Single binary, [`rsaCommented.c`](Main%20Programs/CondensedRSA/rsaCommented.c), produces both individual RSA signatures and a single condensed aggregate over a set of messages.
+**Objective.**
 
-**How it works.** For each message `m_i`, compute `h_i = H(m_i)` and `sig_i = h_i^d mod n`. The condensed signature is the product `agg = ∏ sig_i mod n` — same size as a single signature regardless of `j`. Verification: compute `∏ h_i mod n` and check `agg^e ≡ ∏ h_i (mod n)`. This exploits RSA's multiplicative homomorphism `(a·b)^d = a^d · b^d mod n`.
+Single binary, [`rsaCommented.c`](Main%20Programs/CondensedRSA/rsaCommented.c), produces both individual RSA signatures and a single condensed aggregate over a set of messages.
+
+**Implementation Strategy.**
+
+For each message `m_i`, compute `h_i = H(m_i)` and `sig_i = h_i^d mod n`. The condensed signature is the product `agg = ∏ sig_i mod n` — same size as a single signature regardless of `j`. Verification: compute `∏ h_i mod n` and check `agg^e ≡ ∏ h_i (mod n)`. This exploits RSA's multiplicative homomorphism `(a·b)^d = a^d · b^d mod n`.
 
 **Files**
 - [`rsaCommented.c`](Main%20Programs/CondensedRSA/rsaCommented.c) — showcase implementation with verbose explanatory comments
@@ -258,7 +280,8 @@ cd TestVectors && bash VerifyYourLCMACSolution.sh
 
 **Build & Verify**
 ```bash
-cd TestVectors && bash VerifyYourCRSASolution.sh
+# from within TestVectors/
+bash VerifyYourCRSASolution.sh
 ```
 
 ---
