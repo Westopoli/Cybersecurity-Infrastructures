@@ -2,9 +2,9 @@
 
 > Cryptographic protocols and security infrastructure implemented in **C** with **OpenSSL** — symmetric crypto, identity-based crypto, group key agreement, proof-of-work, aggregate authentication, and forensic logging.
 
-**Contributors:** [Westley Klubeck-Hill](https://github.com/Westopoli) · [Collaborator](#) <!-- LinkedIn TBD -->
+**Contributors:** [Westley Yarlott](https://github.com/Westopoli) · [Daniel Zacarias](www.linkedin.com/in/daniel-zacarias-018291330)
 
-`C` · `OpenSSL` · `Applied Cryptography` · `BIGNUM` · `Elliptic Curves` · `Security Protocols`
+`C` · `OpenSSL` · `Applied Cryptography` · `Elliptic Curves` · `Security Protocols`
 
 ---
 
