@@ -38,7 +38,7 @@ EC-based IBAKE: CA-derived identity public keys + ephemeral DH = authenticated s
 Binary key tree supporting setup, join, leave, merge, and refresh — forward/backward secrecy under membership change.
 `BIGNUM Modular Exp` `Group Key Agreement` `Diffie–Hellman`
 
-### [Lightweight Chained MAC](Main%20Programs/LightweightChainedMAC) — sequential aggregate HMAC <sub>*(source pending)*</sub>
+### [Lightweight Chained MAC](Main%20Programs/LightweightChainedMAC) — sequential aggregate HMAC <sub>*(in debug)*</sub>
 Chained HMAC where each tag depends on the previous, yielding one O(1) aggregate tag for N messages.
 `HMAC-SHA256` `Aggregate Authentication` `Chained MAC`
 
@@ -226,13 +226,19 @@ bash VerifyingYourSolutionTGDH.sh
 
 `C` `OpenSSL` `HMAC-SHA256` `Aggregate Authentication` `Chained MAC`
 
-> **Note.** The source file `lc_umac.c` is not yet in this repository — only the test vectors and verify harness are tracked. The verify script ([`VerifyYourLCMACSolution.sh`](Main%20Programs/LightweightChainedMAC/VerifyYourLCMACSolution.sh)) will compile and exercise the source once it lands.
+> **Status.** Source ([`lc_umac.c`](Main%20Programs/LightweightChainedMAC/lc_umac.c)) compiles cleanly, but file output does not yet match the expected test vectors — actively being debugged.
 
-**What it does (when source is added).** Implements a lightweight chained MAC: each per-message tag is computed under a chained key, and an aggregate tag is folded across messages, yielding constant-size authentication for a sequence of N messages.
+**What it does.** Implements a lightweight chained MAC: each per-message tag is computed under a chained key, and an aggregate tag is folded across messages, yielding constant-size authentication for a sequence of N messages.
 
 **Files**
+- [`lc_umac.c`](Main%20Programs/LightweightChainedMAC/lc_umac.c) — LCMAC implementation
 - [`TestVectors/`](Main%20Programs/LightweightChainedMAC/TestVectors) — message/seed inputs and expected outputs
 - [`VerifyYourLCMACSolution.sh`](Main%20Programs/LightweightChainedMAC/VerifyYourLCMACSolution.sh) — build + run harness
+
+**Build & Verify**
+```bash
+cd TestVectors && bash VerifyYourLCMACSolution.sh
+```
 
 ---
 
@@ -268,7 +274,7 @@ Main Programs/                          # All showcase projects
 ├── HierarchicalIdentityBasedSignatures/# Schnorr 2-level HIBS
 ├── AraziQiKeyExchange/                 # EC IBAKE
 ├── TreeGroupDiffieHellman/             # Group key agreement
-├── LightweightChainedMAC/               # Chained HMAC (source pending)
+├── LightweightChainedMAC/               # Chained HMAC (in debug)
 └── CondensedRSA/                       # RSA aggregate signatures
 
 CyberInfra-PnP-Mac/                     # VirtualBox unattended-install automation

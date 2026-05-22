@@ -3,7 +3,7 @@ set -euo pipefail
 
 rm -rf lc_umac ./*.log a*.txt b*.txt tags*.txt aggtag*.txt
 
-gcc lc_umac.c -lcrypto        -o lc_umac
+gcc ../lc_umac.c -lcrypto        -o lc_umac
 
 total=0
 passed=0

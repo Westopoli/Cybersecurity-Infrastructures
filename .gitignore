@@ -39,3 +39,9 @@ Main Programs/**/refresh
 Main Programs/**/Client
 Main Programs/**/Server
 Main Programs/**/Verify
+
+# LCMAC verify-script regenerated outputs
+Main Programs/LightweightChainedMAC/TestVectors/a.txt
+Main Programs/LightweightChainedMAC/TestVectors/b.txt
+Main Programs/LightweightChainedMAC/TestVectors/tags.txt
+Main Programs/LightweightChainedMAC/TestVectors/aggtag.txt
